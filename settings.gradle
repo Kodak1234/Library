@@ -1,8 +1,9 @@
 rootProject.name = "Library"
-include ':app'
 include ':draghelper'
 include ':adapter'
 include ':navigation'
 include ':selection'
 include ':validation'
 include ':glideloader'
+include ':phone'
+include ':libraryapplication'
