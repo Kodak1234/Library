@@ -42,7 +42,7 @@ class DelegateAdapter(ctx: Context, lifecycle: Lifecycle? = null) : Adapter<Dele
     override fun getItemViewType(position: Int): Int = source!!.type(position)
 
     override fun onBindViewHolder(holder: DelegateHolder, position: Int) {
-        delegateHelper.getDelegate(holder.itemViewType)!!.bindHolder(holder, position)
+        holder.delegate.bindHolder(holder, position)
     }
 
     override fun onViewDetachedFromWindow(holder: DelegateHolder) {
