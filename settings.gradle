@@ -1,6 +1,6 @@
 rootProject.name = "Library"
 include ':draghelper'
-//include ':adapter'
+include ':adapter'
 include ':navigation'
 include ':selection'
 include ':validation'
