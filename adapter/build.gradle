@@ -3,19 +3,6 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'maven-publish'
 
-afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                from components.release
-
-                groupId = 'com.ume.library'
-                artifactId = 'adapter'
-                version = '1.0.0'
-            }
-        }
-    }
-}
 
 android {
     compileSdkVersion 30
@@ -58,4 +45,18 @@ dependencies {
     /*paging*/
     implementation "androidx.paging:paging-runtime-ktx:3.1.0-alpha03"
 
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+
+                groupId = 'com.github.Kodak1234'
+                artifactId = 'adapter'
+                version = '1.0.0'
+            }
+        }
+    }
 }

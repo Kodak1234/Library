@@ -4,20 +4,6 @@ plugins {
     id 'maven-publish'
 }
 
-afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                from components.release
-
-                groupId = 'com.ume.library'
-                artifactId = 'bottomsheet'
-                version = '1.0.0'
-            }
-        }
-    }
-}
-
 android {
     compileSdk 31
 
@@ -55,4 +41,18 @@ dependencies {
     testImplementation 'junit:junit:'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+
+                groupId = 'com.github.Kodak1234'
+                artifactId = 'bottomsheet'
+                version = '1.0.0'
+            }
+        }
+    }
 }

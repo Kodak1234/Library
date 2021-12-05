@@ -3,20 +3,6 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'maven-publish'
 
-afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                from components.release
-
-                groupId = 'com.ume.library'
-                artifactId = 'draghelper'
-                version = '1.0.0'
-            }
-        }
-    }
-}
-
 android {
     compileSdkVersion 30
     buildToolsVersion "29.0.3"
@@ -48,4 +34,18 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:1.2.1"
     implementation 'androidx.core:core-ktx:1.6.0'
 
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+
+                groupId = 'com.github.Kodak1234'
+                artifactId = 'draghelper'
+                version = '1.0.0'
+            }
+        }
+    }
 }
