@@ -1,21 +1,6 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
-    id 'maven-publish'
-}
-
-afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                from components.release
-
-                groupId = 'com.ume.app'
-                artifactId = 'sample'
-                version = '1.0.0'
-            }
-        }
-    }
 }
 
 android {
