@@ -33,7 +33,10 @@ class BottomSheetManager private constructor(
     private val context: FragmentActivity = sheet.context as FragmentActivity
 
     init {
-        scrim?.setOnClickListener {}
+        scrim?.setOnClickListener {
+            if (behavior.isHideable)
+                behavior.state = STATE_HIDDEN
+        }
         behavior.addBottomSheetCallback(this)
         behavior.state = BottomSheetBehavior.STATE_COLLAPSED
         behavior.isHideable = true
@@ -95,6 +98,7 @@ class BottomSheetManager private constructor(
                 frag.lifecycleScope.launchWhenStarted {
                     behavior.state = BottomSheetBehavior.STATE_EXPANDED
                     behavior.isDraggable = true
+                    behavior.isHideable = frag !is IBottomSheet || frag.cancelable
                     scrim?.isVisible = true
                 }
             }
@@ -106,6 +110,7 @@ class BottomSheetManager private constructor(
                 behavior.state = BottomSheetBehavior.STATE_COLLAPSED
                 scrim?.isVisible = false
                 behavior.isDraggable = false
+                behavior.isHideable = true
                 sheet.setTag(sheet.id, null)
             }
         }

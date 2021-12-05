@@ -43,7 +43,7 @@ afterEvaluate {
 
                 groupId = 'com.github.Kodak1234'
                 artifactId = 'selection'
-                version = '1.0.0'
+                version = "$release_version"
             }
         }
     }

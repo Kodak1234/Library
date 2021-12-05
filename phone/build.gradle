@@ -49,7 +49,7 @@ afterEvaluate {
 
                 groupId = 'com.github.Kodak1234'
                 artifactId = 'phone'
-                version = '1.0.0'
+                version = "$release_version"
             }
         }
     }
