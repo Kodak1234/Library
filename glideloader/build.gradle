@@ -5,6 +5,20 @@ plugins {
     id 'maven-publish'
 }
 
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+
+                groupId = 'com.ume.library'
+                artifactId = 'glideloader'
+                version = '1.0.0'
+            }
+        }
+    }
+}
+
 android {
     compileSdkVersion 30
 
