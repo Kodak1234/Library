@@ -4,6 +4,7 @@ interface IBottomSheet {
 
     val scrollId: Int
     val liftId: Int
+    val cancelable: Boolean
 
     fun getCornerRadius(): Float
 

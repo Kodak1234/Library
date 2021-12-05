@@ -8,6 +8,7 @@ abstract class BottomSheetFragment(layoutId: Int) : Fragment(layoutId),
 
     override val scrollId: Int = View.NO_ID
     override val liftId: Int = View.NO_ID
+    override val cancelable: Boolean = true
 
     override fun getCornerRadius(): Float =
         resources.getDimension(R.dimen.defaultRadius)
