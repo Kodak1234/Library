@@ -6,7 +6,6 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
-import androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
@@ -25,12 +24,10 @@ import kotlin.math.max
 
 class BottomSheetManager private constructor(
     private val scrim: View?,
-    private val sheet: ViewGroup
-) : BottomSheetBehavior.BottomSheetCallback() {
-
-    private val behavior = (sheet.layoutParams as LayoutParams).behavior
-            as BottomSheetBehavior
-    private val context: FragmentActivity = sheet.context as FragmentActivity
+    private val sheet: ViewGroup,
+    private val behavior: BottomSheetBehavior<*>,
+    private val context: FragmentActivity
+) : BottomSheetBehavior.BottomSheetCallback(), IBottomSheetManager {
 
     init {
         scrim?.setOnClickListener {
@@ -48,11 +45,16 @@ class BottomSheetManager private constructor(
         )
     }
 
+    override fun hideBottomSheet() {
+        behavior.isHideable = true
+        behavior.state = STATE_HIDDEN
+    }
+
     override fun onStateChanged(bottomSheet: View, newState: Int) {
         if (newState == STATE_HIDDEN) {
             val frag = findFragment()
             if (frag is IBottomSheet)
-                frag.close()
+                frag.onBottomSheetHidden()
         }
     }
 
@@ -104,14 +106,19 @@ class BottomSheetManager private constructor(
             }
         }
 
-        override fun onFragmentStopped(fm: FragmentManager, f: Fragment) {
-            super.onFragmentStopped(fm, f)
-            if (f.id == sheet.id && f.isRemoving) {
+        override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
+            super.onFragmentViewDestroyed(fm, f)
+            //if current attached fragment does not equal then don't hide
+            //bottom sheet.
+            val active = findFragment()
+            if (f.id == sheet.id && f.isRemoving &&
+                (active == f || active == null)
+            ) {
                 behavior.state = BottomSheetBehavior.STATE_COLLAPSED
                 scrim?.isVisible = false
                 behavior.isDraggable = false
                 behavior.isHideable = true
-                sheet.setTag(sheet.id, null)
+                sheet.setTag(R.id.lift_helper, null)
             }
         }
     }
@@ -178,13 +185,18 @@ class BottomSheetManager private constructor(
 
     companion object {
 
-        fun attach(scrim: View?, sheet: ViewGroup): BottomSheetManager {
-            val watcher = BottomSheetManager(scrim, sheet)
-            sheet.setTag(R.id.bottom_sheet_manager, watcher)
+        fun attach(
+            context: FragmentActivity,
+            scrim: View?,
+            container: ViewGroup,
+            behavior: BottomSheetBehavior<*>
+        ): IBottomSheetManager {
+            val watcher = BottomSheetManager(scrim, container, behavior, context)
+            container.setTag(R.id.bottom_sheet_manager, watcher)
             return watcher
         }
 
-        fun find(frag: Fragment): BottomSheetManager? {
+        fun find(frag: Fragment): IBottomSheetManager? {
             val sheet = frag.requireActivity().findViewById<View>(frag.id)
             return if (sheet != null)
                 sheet.getTag(R.id.bottom_sheet_manager) as? BottomSheetManager?
