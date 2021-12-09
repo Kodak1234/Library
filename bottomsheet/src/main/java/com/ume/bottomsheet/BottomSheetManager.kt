@@ -6,6 +6,7 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
@@ -30,6 +31,8 @@ class BottomSheetManager private constructor(
 ) : BottomSheetBehavior.BottomSheetCallback(), IBottomSheetManager {
 
     init {
+        //capture clicks inside sheet bounds
+        sheet.setOnClickListener { }
         scrim?.setOnClickListener {
             if (behavior.isHideable)
                 behavior.state = STATE_HIDDEN
@@ -71,6 +74,13 @@ class BottomSheetManager private constructor(
         context.supportFragmentManager
             .findFragmentById(sheet.id)
 
+    inner class BackPressHandler : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (behavior.isHideable)
+                hideBottomSheet()
+        }
+    }
+
     inner class FragmentWatcher : FragmentLifecycleCallbacks() {
         override fun onFragmentViewCreated(
             fm: FragmentManager,
@@ -97,6 +107,10 @@ class BottomSheetManager private constructor(
                         )
                     )
                 }
+                context.onBackPressedDispatcher.addCallback(
+                    frag.viewLifecycleOwner,
+                    BackPressHandler()
+                )
                 frag.lifecycleScope.launchWhenStarted {
                     behavior.state = BottomSheetBehavior.STATE_EXPANDED
                     behavior.isDraggable = true
