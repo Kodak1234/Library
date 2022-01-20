@@ -12,8 +12,8 @@ interface IBottomSheet {
         get() = false
     val elevation: Float
         get() = 0f
-    val backgroundColor: Int
-        get() = 0
+    val backgroundColor: Int?
+        get() = null
     val cornerRadius: Float
         get() = 0f
     val liftElevation: Float

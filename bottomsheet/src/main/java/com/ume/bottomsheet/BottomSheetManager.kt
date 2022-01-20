@@ -213,13 +213,13 @@ class BottomSheetManager private constructor(
 
         private fun setBackground(
             view: View?, radius: Float,
-            color: Int = Color.WHITE
+            color: Int? = null
         ) {
             if (view != null) {
                 ViewCompat.setBackground(view, MaterialShapeDrawable().apply {
                     fillColor = ColorStateList.valueOf(
                         when {
-                            color != 0 -> color
+                            color != null -> color
                             view.background is ColorDrawable -> (view.background as ColorDrawable).color
                             else -> MaterialColors.getColor(
                                 view,
