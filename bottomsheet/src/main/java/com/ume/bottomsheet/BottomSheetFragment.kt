@@ -1,6 +1,5 @@
 package com.ume.bottomsheet
 
-import android.view.View
 import androidx.fragment.app.Fragment
 
 abstract class BottomSheetFragment : Fragment,
@@ -10,15 +9,12 @@ abstract class BottomSheetFragment : Fragment,
 
     constructor() : super()
 
-    override val scrollId: Int = View.NO_ID
-    override val liftId: Int = View.NO_ID
-    override val cancelable: Boolean = true
-
-    override fun getCornerRadius(): Float =
-        resources.getDimension(R.dimen.defaultRadius)
-
-    override fun getLiftElevation(): Float =
-        resources.getDimension(R.dimen.defaultElevation)
+    override val cornerRadius: Float
+        get() = resources.getDimension(R.dimen.defaultRadius)
+    override val liftElevation: Float
+        get() = resources.getDimension(R.dimen.defaultElevation)
+    override val elevation: Float
+        get() = resources.getDimension(R.dimen.defaultElevation)
 
     fun getBottomSheetManager(): IBottomSheetManager =
         BottomSheetManager.find(this)!!

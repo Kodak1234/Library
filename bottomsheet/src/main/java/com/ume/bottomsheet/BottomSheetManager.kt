@@ -42,7 +42,6 @@ class BottomSheetManager private constructor(
         behavior.isHideable = true
         behavior.isDraggable = false
 
-        setBackground(sheet, 0f)
         context.supportFragmentManager.registerFragmentLifecycleCallbacks(
             FragmentWatcher(), false
         )
@@ -90,15 +89,10 @@ class BottomSheetManager private constructor(
         ) {
             if (frag.id == sheet.id) {
                 if (frag is IBottomSheet) {
-                    val elevation = frag.getLiftElevation()
-                    val radius = frag.getCornerRadius()
-                    getBackground(sheet)?.apply {
-                        shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                            .setTopLeftCorner(CornerFamily.ROUNDED, radius)
-                            .setTopRightCorner(CornerFamily.ROUNDED, radius)
-                            .build()
-                    }
-
+                    val elevation = frag.liftElevation
+                    val radius = frag.cornerRadius
+                    setBackground(sheet, radius, frag.backgroundColor)
+                    ViewCompat.setElevation(sheet, frag.elevation)
                     sheet.setTag(
                         R.id.lift_helper, LiftHelper(
                             radius, elevation, sheet,
@@ -217,14 +211,17 @@ class BottomSheetManager private constructor(
             else null
         }
 
-        private fun setBackground(view: View?, radius: Float) {
+        private fun setBackground(
+            view: View?, radius: Float,
+            color: Int = Color.WHITE
+        ) {
             if (view != null) {
                 ViewCompat.setBackground(view, MaterialShapeDrawable().apply {
                     fillColor = ColorStateList.valueOf(
-                        if (view.background is ColorDrawable)
-                            (view.background as ColorDrawable).color
-                        else {
-                            MaterialColors.getColor(
+                        when {
+                            color != 0 -> color
+                            view.background is ColorDrawable -> (view.background as ColorDrawable).color
+                            else -> MaterialColors.getColor(
                                 view,
                                 R.attr.colorSurface,
                                 Color.WHITE
