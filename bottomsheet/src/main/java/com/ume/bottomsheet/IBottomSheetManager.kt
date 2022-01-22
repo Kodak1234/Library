@@ -4,5 +4,5 @@ import androidx.fragment.app.Fragment
 
 interface IBottomSheetManager {
     fun hideBottomSheet()
-    fun showBottomSheet(fragment: Fragment)
+    fun showBottomSheet(fragment: Fragment, tag: String? = null)
 }

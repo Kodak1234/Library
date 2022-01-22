@@ -30,7 +30,7 @@ class BottomSheetManager private constructor(
     private val context: FragmentActivity
 ) : BottomSheetBehavior.BottomSheetCallback(), IBottomSheetManager {
 
-    private var pendingFragment: Fragment? = null
+    private var pendingState: PendingState? = null
 
     init {
         //capture clicks inside sheet bounds
@@ -54,12 +54,12 @@ class BottomSheetManager private constructor(
         behavior.state = STATE_HIDDEN
     }
 
-    override fun showBottomSheet(fragment: Fragment) {
+    override fun showBottomSheet(fragment: Fragment, tag: String?) {
         if (findFragment() != null) {
-            pendingFragment = fragment
+            pendingState = PendingState(fragment, tag)
             hideBottomSheet()
         } else
-            showInternal(fragment)
+            showInternal(PendingState(fragment, tag))
     }
 
     override fun onStateChanged(bottomSheet: View, newState: Int) {
@@ -76,10 +76,10 @@ class BottomSheetManager private constructor(
             liftHelper.setInterpolation(1 - max(slideOffset, 0f))
     }
 
-    private fun showInternal(frag: Fragment) {
+    private fun showInternal(state: PendingState) {
         context.supportFragmentManager
             .beginTransaction()
-            .replace(sheet.id, frag)
+            .replace(sheet.id, state.frag, state.tag)
             .commit()
     }
 
@@ -145,9 +145,9 @@ class BottomSheetManager private constructor(
                 behavior.isHideable = true
                 sheet.setTag(R.id.lift_helper, null)
 
-                if (pendingFragment != null) {
-                    showInternal(pendingFragment!!)
-                    pendingFragment = null
+                if (pendingState != null) {
+                    showInternal(pendingState!!)
+                    pendingState = null
                 }
             }
         }
@@ -212,6 +212,8 @@ class BottomSheetManager private constructor(
             }
         }
     }
+
+    class PendingState(val frag: Fragment, val tag: String?)
 
     companion object {
 
