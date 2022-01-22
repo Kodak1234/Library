@@ -15,9 +15,7 @@ class MainActivity : AppCompatActivity() {
 
         val show = findViewById<View>(R.id.showSheet)
         show.setOnClickListener {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.container, BottomSheetExample())
-                .commit()
+            BottomSheetManager.find(this)!!.showBottomSheet(BottomSheetExample())
         }
 
         val v = findViewById<TextView>(R.id.text)

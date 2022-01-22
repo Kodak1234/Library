@@ -30,6 +30,8 @@ class BottomSheetManager private constructor(
     private val context: FragmentActivity
 ) : BottomSheetBehavior.BottomSheetCallback(), IBottomSheetManager {
 
+    private var pendingFragment: Fragment? = null
+
     init {
         //capture clicks inside sheet bounds
         sheet.setOnClickListener { }
@@ -52,6 +54,14 @@ class BottomSheetManager private constructor(
         behavior.state = STATE_HIDDEN
     }
 
+    override fun showBottomSheet(fragment: Fragment) {
+        if (findFragment() != null) {
+            pendingFragment = fragment
+            hideBottomSheet()
+        } else
+            showInternal(fragment)
+    }
+
     override fun onStateChanged(bottomSheet: View, newState: Int) {
         if (newState == STATE_HIDDEN) {
             val frag = findFragment()
@@ -64,6 +74,13 @@ class BottomSheetManager private constructor(
         val liftHelper = findHelper()
         if (liftHelper?.enable == true)
             liftHelper.setInterpolation(1 - max(slideOffset, 0f))
+    }
+
+    private fun showInternal(frag: Fragment) {
+        context.supportFragmentManager
+            .beginTransaction()
+            .replace(sheet.id, frag)
+            .commit()
     }
 
     private fun findHelper(): LiftHelper? =
@@ -127,6 +144,11 @@ class BottomSheetManager private constructor(
                 behavior.isDraggable = false
                 behavior.isHideable = true
                 sheet.setTag(R.id.lift_helper, null)
+
+                if (pendingFragment != null) {
+                    showInternal(pendingFragment!!)
+                    pendingFragment = null
+                }
             }
         }
     }
@@ -199,17 +221,20 @@ class BottomSheetManager private constructor(
             container: ViewGroup,
             behavior: BottomSheetBehavior<*>
         ): IBottomSheetManager {
-            val watcher = BottomSheetManager(scrim, container, behavior, context)
-            container.setTag(R.id.bottom_sheet_manager, watcher)
-            return watcher
+            val content = context.findViewById<View>(android.R.id.content)
+            if (content.getTag(R.id.bottom_sheet_manager) != null)
+                throw UnsupportedOperationException("Bottom sheet manager is already attached")
+            val mn = BottomSheetManager(scrim, container, behavior, context)
+            content.setTag(R.id.bottom_sheet_manager, mn)
+            return mn
         }
 
-        fun find(frag: Fragment): IBottomSheetManager? {
-            val sheet = frag.requireActivity().findViewById<View>(frag.id)
-            return if (sheet != null)
-                sheet.getTag(R.id.bottom_sheet_manager) as? BottomSheetManager?
-            else null
+        fun find(context: FragmentActivity): IBottomSheetManager? {
+            return context.findViewById<View>(android.R.id.content)
+                .getTag(R.id.bottom_sheet_manager) as IBottomSheetManager?
         }
+
+        fun find(frag: Fragment): IBottomSheetManager? = find(frag.requireActivity())
 
         private fun setBackground(
             view: View?, radius: Float,
