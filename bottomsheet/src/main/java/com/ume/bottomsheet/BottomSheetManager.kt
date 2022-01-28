@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.ViewCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
@@ -17,7 +18,7 @@ import androidx.fragment.app.FragmentManager.FragmentLifecycleCallbacks
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
+import com.google.android.material.bottomsheet.BottomSheetBehavior.*
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.MaterialShapeDrawable
@@ -34,13 +35,14 @@ class BottomSheetManager private constructor(
 
     init {
         //capture clicks inside sheet bounds
+        sheet.isSoundEffectsEnabled = false
         sheet.setOnClickListener { }
         scrim?.setOnClickListener {
             if (behavior.isHideable)
                 behavior.state = STATE_HIDDEN
         }
         behavior.addBottomSheetCallback(this)
-        behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        behavior.state = STATE_COLLAPSED
         behavior.isHideable = true
         behavior.isDraggable = false
 
@@ -55,19 +57,35 @@ class BottomSheetManager private constructor(
     }
 
     override fun showBottomSheet(fragment: Fragment, tag: String?) {
-        if (findFragment() != null) {
-            pendingState = PendingState(fragment, tag)
-            hideBottomSheet()
-        } else
-            showInternal(PendingState(fragment, tag))
+        when {
+            findFragment() != null -> {
+                pendingState = PendingState(fragment, tag)
+                hideBottomSheet()
+            }
+            //nested scrolling could override the state
+            behavior.state == STATE_EXPANDED -> {
+                pendingState = PendingState(fragment, tag)
+                behavior.state = STATE_COLLAPSED
+            }
+            else -> showInternal(fragment, tag)
+        }
     }
 
     override fun onStateChanged(bottomSheet: View, newState: Int) {
-        if (newState == STATE_HIDDEN) {
-            val frag = findFragment()
-            if (frag is IBottomSheet)
-                frag.onBottomSheetHidden()
+        when (newState) {
+            STATE_HIDDEN -> {
+                val frag = findFragment()
+                if (frag is IBottomSheet)
+                    frag.onBottomSheetHidden()
+            }
+            STATE_COLLAPSED -> {
+                if (pendingState != null) {
+                    showInternal(pendingState!!.frag, pendingState!!.tag)
+                    pendingState = null
+                }
+            }
         }
+
     }
 
     override fun onSlide(bottomSheet: View, slideOffset: Float) {
@@ -76,11 +94,13 @@ class BottomSheetManager private constructor(
             liftHelper.setInterpolation(1 - max(slideOffset, 0f))
     }
 
-    private fun showInternal(state: PendingState) {
-        context.supportFragmentManager
-            .beginTransaction()
-            .replace(sheet.id, state.frag, state.tag)
-            .commit()
+    private fun showInternal(frag: Fragment, tag: String?) {
+        val mn = context.supportFragmentManager
+        if (tag == null || mn.findFragmentByTag(tag) == null) {
+            mn.beginTransaction()
+                .replace(sheet.id, frag, tag)
+                .commit()
+        }
     }
 
     private fun findHelper(): LiftHelper? =
@@ -123,7 +143,7 @@ class BottomSheetManager private constructor(
                     BackPressHandler()
                 )
                 frag.lifecycleScope.launchWhenStarted {
-                    behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                    behavior.state = STATE_EXPANDED
                     behavior.isDraggable = true
                     behavior.isHideable = frag !is IBottomSheet || frag.cancelable
                     scrim?.isVisible = true
@@ -139,16 +159,11 @@ class BottomSheetManager private constructor(
             if (f.id == sheet.id && f.isRemoving &&
                 (active == f || active == null)
             ) {
-                behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                behavior.state = STATE_COLLAPSED
                 scrim?.isVisible = false
                 behavior.isDraggable = false
                 behavior.isHideable = true
                 sheet.setTag(R.id.lift_helper, null)
-
-                if (pendingState != null) {
-                    showInternal(pendingState!!)
-                    pendingState = null
-                }
             }
         }
     }
