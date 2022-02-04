@@ -6,7 +6,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.guidedtour.Scene
-import com.example.guidedtour.SceneManager
+import com.example.guidedtour.impl.SceneManager
 import com.example.guidedtour.impl.DummyDictator
 import com.example.guidedtour.impl.DummyWatcher
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -52,6 +52,6 @@ class MainActivity : AppCompatActivity() {
                 ), BottomSheetWatcher(behavior)
             )
         )
-        sceneMn.beginTour()
+        sceneMn.beginTour(5000)
     }
 }

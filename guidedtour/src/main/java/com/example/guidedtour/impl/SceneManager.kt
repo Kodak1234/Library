@@ -1,21 +1,23 @@
-package com.example.guidedtour
+package com.example.guidedtour.impl
 
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import com.example.guidedtour.ISceneManager
+import com.example.guidedtour.Scene
 import java.util.*
 
-class SceneManager(vararg args: Scene) {
+class SceneManager(vararg args: Scene) : ISceneManager {
     private val scenes = LinkedList(args.toList())
     private var scene: Scene? = null
     private val handler: SceneHandler
         get() = SceneHandler(this)
     private var started = false
 
-    fun beginTour() {
+    override fun beginTour(delay: Long) {
         if (started) throw IllegalStateException("Cannot call beginTour() more than once")
         started = true
-        handler.sendEmptyMessage(NEXT)
+        handler.sendEmptyMessageDelayed(NEXT, delay)
     }
 
     private fun dispatchTour() {
