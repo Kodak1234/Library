@@ -7,8 +7,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.guidedtour.Scene
 import com.example.guidedtour.impl.SceneManager
-import com.example.guidedtour.impl.DummyDictator
-import com.example.guidedtour.impl.DummyWatcher
+import com.example.guidedtour.impl.NoOpDictator
+import com.example.guidedtour.impl.NoOpWatcher
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.ume.bottomsheet.BottomSheetManager
 import com.ume.phone.PhoneUtil
@@ -40,13 +40,13 @@ class MainActivity : AppCompatActivity() {
 
         sceneMn = SceneManager(
             Scene(
-                DummyDictator(), VSpotGuide(
+                NoOpDictator(), VSpotGuide(
                     show,
                     "Show Bottom Sheet", "Click button to reveal bottom sheet"
                 ),
-                DummyWatcher()
+                NoOpWatcher()
             ), Scene(
-                DummyDictator(), VSpotGuide(
+                NoOpDictator(), VSpotGuide(
                     close,
                     "Close Bottom Sheet", "Click button to hide bottom sheet"
                 ), BottomSheetWatcher(behavior)
