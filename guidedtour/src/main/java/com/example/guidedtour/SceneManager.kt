@@ -10,25 +10,29 @@ class SceneManager(vararg args: Scene) {
     private var scene: Scene? = null
     private val handler: SceneHandler
         get() = SceneHandler(this)
+    private var started = false
 
-    fun notifySceneChange() {
-        handler.sendEmptyMessage(TOUR)
-    }
-
-    fun nextTour() {
+    fun beginTour() {
+        if (started) throw IllegalStateException("Cannot call beginTour() more than once")
+        started = true
         handler.sendEmptyMessage(NEXT)
     }
 
     private fun dispatchTour() {
-        scene!!.guide.beginTour(this, scene!!.dictator)
+        scene!!.guide.beginTour {
+            scene!!.dictator.commitTour()
+            handler.sendEmptyMessage(NEXT)
+        }
     }
 
-    private fun startNextTour() {
+    private fun nextTour() {
         do {
             scene = nextScene()
             val sc = scene
             if (sc != null && sc.dictator.canTour()) {
-                sc.watcher.watchScene(this)
+                sc.watcher.watchScene {
+                    handler.sendEmptyMessage(TOUR)
+                }
                 break
             }
         } while (scene != null)
@@ -40,7 +44,7 @@ class SceneManager(vararg args: Scene) {
         override fun handleMessage(msg: Message) {
             super.handleMessage(msg)
             when (msg.what) {
-                NEXT -> mn.startNextTour()
+                NEXT -> mn.nextTour()
                 TOUR -> mn.dispatchTour()
             }
         }

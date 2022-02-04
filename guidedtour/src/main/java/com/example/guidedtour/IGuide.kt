@@ -1,5 +1,5 @@
 package com.example.guidedtour
 
 interface IGuide {
-    fun beginTour(manager: SceneManager, dictator: IDictator)
+    fun beginTour(notify: () -> Unit)
 }

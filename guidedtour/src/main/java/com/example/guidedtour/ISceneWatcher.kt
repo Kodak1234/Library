@@ -2,5 +2,5 @@ package com.example.guidedtour
 
 interface ISceneWatcher {
 
-    fun watchScene(manager: SceneManager)
+    fun watchScene(notify: () -> Unit)
 }

@@ -52,6 +52,6 @@ class MainActivity : AppCompatActivity() {
                 ), BottomSheetWatcher(behavior)
             )
         )
-        sceneMn.nextTour()
+        sceneMn.beginTour()
     }
 }
