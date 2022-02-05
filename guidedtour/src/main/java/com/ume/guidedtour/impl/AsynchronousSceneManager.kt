@@ -41,6 +41,7 @@ class AsynchronousSceneManager(vararg scenes: Scene) : ISceneManager {
         if (scene == null && scenesReady.isNotEmpty()) {
             scene = scenesReady.poll()
             scene!!.guide.beginTour {
+                scene!!.dictator.commitTour()
                 scene = null
                 handler.sendEmptyMessage(TOUR)
             }
