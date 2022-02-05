@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
         val show = findViewById<View>(R.id.showSheet)
         val close = findViewById<View>(R.id.closeButton)
         show.setOnClickListener {
-            mn.showBottomSheet(BottomSheetExample())
+            mn.showBottomSheet(BottomSheetExample(),"Hello")
         }
         close.setOnClickListener {
             mn.hideBottomSheet()

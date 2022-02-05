@@ -57,15 +57,12 @@ class BottomSheetManager private constructor(
     }
 
     override fun showBottomSheet(fragment: Fragment, tag: String?) {
-        when {
-            findFragment() != null -> {
-                pendingState = PendingState(fragment, tag)
-                hideBottomSheet()
-            }
-            //nested scrolling could override the state
-            behavior.state == STATE_EXPANDED -> {
-                pendingState = PendingState(fragment, tag)
-                behavior.state = STATE_COLLAPSED
+        when (behavior.state) {
+            STATE_EXPANDED -> {
+                if (tag == null || findFragment()?.tag != tag) {
+                    pendingState = PendingState(fragment, tag)
+                    hideBottomSheet()
+                }
             }
             else -> showInternal(fragment, tag)
         }
@@ -77,6 +74,8 @@ class BottomSheetManager private constructor(
                 val frag = findFragment()
                 if (frag is IBottomSheet)
                     frag.onBottomSheetHidden()
+                else if (frag == null)
+                    behavior.state = STATE_COLLAPSED
             }
             STATE_COLLAPSED -> {
                 if (pendingState != null) {
@@ -96,11 +95,9 @@ class BottomSheetManager private constructor(
 
     private fun showInternal(frag: Fragment, tag: String?) {
         val mn = context.supportFragmentManager
-        if (tag == null || mn.findFragmentByTag(tag) == null) {
-            mn.beginTransaction()
-                .replace(sheet.id, frag, tag)
-                .commit()
-        }
+        mn.beginTransaction()
+            .replace(sheet.id, frag, tag)
+            .commit()
     }
 
     private fun findHelper(): LiftHelper? =
