@@ -1,8 +1,8 @@
-package com.example.guidedtour.impl
+package com.ume.guidedtour.impl
 
 import android.content.Context
 import android.preference.PreferenceManager
-import com.example.guidedtour.IDictator
+import com.ume.guidedtour.IDictator
 
 class PreferenceDictator(context: Context, private val prefKey: String) : IDictator {
     private val mn = PreferenceManager.getDefaultSharedPreferences(context.applicationContext)

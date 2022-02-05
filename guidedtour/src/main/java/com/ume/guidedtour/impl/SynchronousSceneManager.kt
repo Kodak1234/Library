@@ -1,13 +1,16 @@
-package com.example.guidedtour.impl
+package com.ume.guidedtour.impl
 
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
-import com.example.guidedtour.ISceneManager
-import com.example.guidedtour.Scene
+import com.ume.guidedtour.ISceneManager
+import com.ume.guidedtour.Scene
 import java.util.*
 
-class SceneManager(vararg args: Scene) : ISceneManager {
+/**
+ * Executes scenes in the order they were added
+ */
+class SynchronousSceneManager(vararg args: Scene) : ISceneManager {
     private val scenes = LinkedList(args.toList())
     private var scene: Scene? = null
     private val handler: SceneHandler
@@ -42,7 +45,8 @@ class SceneManager(vararg args: Scene) : ISceneManager {
 
     private fun nextScene(): Scene? = scenes.poll()
 
-    private class SceneHandler(private val mn: SceneManager) : Handler(Looper.getMainLooper()) {
+    private class SceneHandler(private val mn: SynchronousSceneManager) :
+        Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             super.handleMessage(msg)
             when (msg.what) {

@@ -1,6 +1,6 @@
-package com.example.guidedtour.impl
+package com.ume.guidedtour.impl
 
-import com.example.guidedtour.IDictator
+import com.ume.guidedtour.IDictator
 
 class NoOpDictator : IDictator {
     override fun canTour(): Boolean = true

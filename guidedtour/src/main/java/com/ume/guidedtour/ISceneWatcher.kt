@@ -1,4 +1,4 @@
-package com.example.guidedtour
+package com.ume.guidedtour
 
 interface ISceneWatcher {
 

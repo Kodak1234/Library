@@ -5,16 +5,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.example.guidedtour.Scene
-import com.example.guidedtour.impl.SceneManager
-import com.example.guidedtour.impl.NoOpDictator
-import com.example.guidedtour.impl.NoOpWatcher
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.ume.bottomsheet.BottomSheetManager
+import com.ume.guidedtour.ISceneManager
+import com.ume.guidedtour.Scene
+import com.ume.guidedtour.impl.AsynchronousSceneManager
+import com.ume.guidedtour.impl.NoOpDictator
+import com.ume.guidedtour.impl.NoOpWatcher
 import com.ume.phone.PhoneUtil
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var sceneMn: SceneManager
+    private lateinit var sceneMn: ISceneManager
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -38,20 +39,21 @@ class MainActivity : AppCompatActivity() {
             mn.hideBottomSheet()
         }
 
-        sceneMn = SceneManager(
+        sceneMn = AsynchronousSceneManager(
+            Scene(
+                NoOpDictator(), VSpotGuide(
+                    close,
+                    "Close Bottom Sheet", "Click button to hide bottom sheet"
+                ), BottomSheetWatcher(behavior)
+            ),
             Scene(
                 NoOpDictator(), VSpotGuide(
                     show,
                     "Show Bottom Sheet", "Click button to reveal bottom sheet"
                 ),
                 NoOpWatcher()
-            ), Scene(
-                NoOpDictator(), VSpotGuide(
-                    close,
-                    "Close Bottom Sheet", "Click button to hide bottom sheet"
-                ), BottomSheetWatcher(behavior)
             )
         )
-        sceneMn.beginTour(5000)
+        sceneMn.beginTour(1000)
     }
 }

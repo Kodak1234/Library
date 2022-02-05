@@ -2,7 +2,7 @@ package com.ume.libraryapplication
 
 import android.view.View
 import com.developer.spoti.vspoti.VSpotView
-import com.example.guidedtour.IGuide
+import com.ume.guidedtour.IGuide
 
 class VSpotGuide(
     private val view: View,

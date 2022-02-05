@@ -1,6 +1,6 @@
-package com.example.guidedtour.impl
+package com.ume.guidedtour.impl
 
-import com.example.guidedtour.ISceneWatcher
+import com.ume.guidedtour.ISceneWatcher
 
 class NoOpWatcher : ISceneWatcher {
     override fun watchScene(notify: () -> Unit) {

@@ -1,7 +1,7 @@
 package com.ume.libraryapplication
 
 import android.view.View
-import com.example.guidedtour.ISceneWatcher
+import com.ume.guidedtour.ISceneWatcher
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
