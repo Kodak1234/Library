@@ -3,10 +3,10 @@ package com.ume.adapter.delegate
 import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.lifecycle.DefaultLifecycleObserver
 import com.ume.adapter.DelegateHolder
-import com.ume.adapter.callback.StateListener
 
-abstract class AdapterDelegate : StateListener {
+abstract class AdapterDelegate : DefaultLifecycleObserver {
 
     open fun onSaveState(): Parcelable? {
         return null
@@ -17,7 +17,7 @@ abstract class AdapterDelegate : StateListener {
     }
 
     open fun bindHolder(holder: DelegateHolder, position: Int) {
-
+        holder.bind()
     }
 
     open fun attachedToWindow(holder: DelegateHolder) {}

@@ -3,12 +3,14 @@ package com.ume.adapter
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.SparseArray
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.ume.adapter.callback.DelegateHost
-import com.ume.adapter.callback.StateListener
 import com.ume.adapter.delegate.AdapterDelegate
 
-class DelegateHelper : StateListener, DelegateHost, LifecycleObserver {
+class DelegateHelper : DefaultLifecycleObserver, DelegateHost, LifecycleObserver {
     private val delegates = SparseArray<AdapterDelegate>()
     private val list = ArrayList<AdapterDelegate>()
 
@@ -30,27 +32,32 @@ class DelegateHelper : StateListener, DelegateHost, LifecycleObserver {
         }
     }
 
-    override fun onStart() {
+    override fun onStart(owner: LifecycleOwner) {
+        super.onStart(owner)
         for (delegate in list) {
-            delegate.onStart()
+            delegate.onStart(owner)
         }
     }
 
-    override fun onStop() {
+    override fun onStop(owner: LifecycleOwner) {
+        super.onStop(owner)
         for (delegate in list) {
-            delegate.onStop()
+            delegate.onStop(owner)
         }
     }
 
-    override fun onCreate() {
+    override fun onCreate(owner: LifecycleOwner) {
+        super.onCreate(owner)
         for (delegate in list) {
-            delegate.onCreate()
+            delegate.onCreate(owner)
         }
     }
 
-    override fun onDestroy() {
+    override fun onDestroy(owner: LifecycleOwner) {
+        super.onDestroy(owner)
+        owner.lifecycle.removeObserver(this)
         for (delegate in list) {
-            delegate.onDestroy()
+            delegate.onDestroy(owner)
         }
     }
 
@@ -65,6 +72,10 @@ class DelegateHelper : StateListener, DelegateHost, LifecycleObserver {
 
     override fun getDelegate(type: Int): AdapterDelegate? {
         return delegates[type]
+    }
+
+    override fun observe(lifecycle: Lifecycle) {
+        lifecycle.addObserver(this)
     }
 
     companion object {

@@ -10,7 +10,7 @@ import com.ume.adapter.callback.AdapterSource
 import com.ume.adapter.callback.DelegateHost
 import com.ume.adapter.delegate.AdapterDelegate
 
-class DelegateAdapter(ctx: Context, lifecycle: Lifecycle? = null) : Adapter<DelegateHolder>(),
+class DelegateAdapter(ctx: Context) : Adapter<DelegateHolder>(),
     DelegateHost {
     var source: AdapterSource<*>? = null
         set(value) {
@@ -21,10 +21,6 @@ class DelegateAdapter(ctx: Context, lifecycle: Lifecycle? = null) : Adapter<Dele
 
     private val delegateHelper = DelegateHelper()
     private val inflater = LayoutInflater.from(ctx)
-
-    init {
-        lifecycle?.addObserver(delegateHelper)
-    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DelegateHolder {
         val delegate = delegateHelper.getDelegate(viewType)
@@ -67,6 +63,10 @@ class DelegateAdapter(ctx: Context, lifecycle: Lifecycle? = null) : Adapter<Dele
 
     override fun onRestore(bundle: Bundle?) {
         delegateHelper.onRestore(bundle)
+    }
+
+    override fun observe(lifecycle: Lifecycle) {
+        delegateHelper.observe(lifecycle)
     }
 
     @Suppress("UNCHECKED_CAST")

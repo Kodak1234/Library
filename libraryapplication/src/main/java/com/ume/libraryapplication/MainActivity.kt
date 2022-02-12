@@ -54,6 +54,6 @@ class MainActivity : AppCompatActivity() {
                 NoOpWatcher()
             )
         )
-        sceneMn.beginTour(1000)
+        //sceneMn.beginTour(1000)
     }
 }

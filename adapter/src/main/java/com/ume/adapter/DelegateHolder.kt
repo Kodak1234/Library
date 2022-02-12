@@ -16,4 +16,6 @@ open class DelegateHolder(v: View) : ViewHolder(v) {
     @Suppress("UNCHECKED_CAST")
     fun <E> item(): E = source[bindingAdapterPosition] as E
 
+    open fun bind() {}
+
 }
