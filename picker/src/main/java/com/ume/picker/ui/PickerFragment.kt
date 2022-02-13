@@ -22,6 +22,7 @@ import com.ume.selection.SelectionHelper
 import com.ume.util.OffsetItemDecoration
 import com.ume.util.dp
 import kotlinx.parcelize.Parcelize
+import kotlin.math.max;
 
 class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
 
@@ -71,7 +72,7 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
         val list = view.findViewById<RecyclerView>(R.id.list)
         list.adapter = adapter
         val mn = GridLayoutManager(
-            requireContext(), config!!.spanCount,
+            requireContext(), max(1, config!!.spanCount),
             config!!.orientation, false
         )
         list.layoutManager = mn
@@ -81,9 +82,7 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
 
         if (config!!.spanCount == -1) {
             list.doOnPreDraw {
-                config!!.spanCount = (list.width / resources.dp(100))
-                mn.spanCount = config!!.spanCount
-
+                mn.spanCount = (list.width / resources.dp(100)) + 1
             }
         }
 
