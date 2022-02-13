@@ -5,6 +5,6 @@
 
     <style name="Shape.Rounded">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">8dp</item>
+        <item name="cornerSize">50%</item>
     </style>
 </resources>

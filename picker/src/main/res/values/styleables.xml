@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="Picker">
+        <attr name="picker_spanCount" format="integer" />
+        <attr name="picker_orientation">
+            <enum name="vertical" value="1" />
+            <enum name="horizontal" value="0" />
+        </attr>
+        <attr name="picker_types">
+            <flag name="image" value="0x1" />
+            <flag name="video" value="0x2" />
+            <flag name="audio" value="0x4" />
+        </attr>
+    </declare-styleable>
+</resources>

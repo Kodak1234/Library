@@ -3,20 +3,43 @@ package com.ume.picker.ui
 import android.app.Application
 import android.database.ContentObserver
 import android.database.Cursor
-import android.os.Environment
 import android.provider.MediaStore
 import android.provider.MediaStore.Files.FileColumns
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
+import com.ume.picker.data.MediaItem
+import com.ume.util.BitFlag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MediaDataViewModel(private val app: Application) : AndroidViewModel(app) {
+class MediaDataViewModel(
+    private val app: Application,
+    types: Int
+) : AndroidViewModel(app) {
     val cursor = MutableLiveData<Cursor?>()
     private var pCursor: Cursor? = null
     private val observer = CursorObserver()
+    private val mimeFilter = StringBuilder()
+    private val mimeArg = mutableListOf<String>()
+
+    init {
+        val mimes = mapOf(
+            MediaItem.Type.AUDIO to "audio/%",
+            MediaItem.Type.IMAGE to "image/%",
+            MediaItem.Type.VIDEO to "video/%"
+        )
+
+        val flag = BitFlag(types)
+        for (e in mimes.entries) {
+            if (flag.has(e.key)) {
+                if (mimeFilter.isNotEmpty())
+                    mimeFilter.append(" OR ")
+                mimeFilter.append("${FileColumns.MIME_TYPE} LIKE ?")
+                mimeArg.add(e.value)
+            }
+        }
+
+    }
 
     override fun onCleared() {
         super.onCleared()
@@ -29,7 +52,7 @@ class MediaDataViewModel(private val app: Application) : AndroidViewModel(app) {
             val c = app.contentResolver.query(
                 MediaStore.Files.getContentUri("external"),
                 arrayOf(FileColumns.MIME_TYPE, FileColumns.DATA, FileColumns.DISPLAY_NAME),
-                null, null, null
+                mimeFilter.toString(), mimeArg.toTypedArray(), "${FileColumns.DATE_ADDED} DESC"
             )
             withContext(Dispatchers.Main) {
                 cursor.value = c
@@ -45,6 +68,16 @@ class MediaDataViewModel(private val app: Application) : AndroidViewModel(app) {
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
             load()
+        }
+    }
+
+    class Factory(
+        private val app: Application,
+        private val types: Int
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel?> create(modelClass: Class<T>): T {
+            return modelClass.getConstructor(Application::class.java, Int::class.java)
+                .newInstance(app, types)
         }
     }
 }

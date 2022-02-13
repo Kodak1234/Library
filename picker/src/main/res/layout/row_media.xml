@@ -1,19 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_gravity="center"
     android:background="?selectableItemBackgroundBorderless">
 
-    <com.google.android.material.imageview.ShapeableImageView
+    <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/img"
         android:layout_width="100dp"
-        android:scaleType="centerCrop"
-        app:strokeColor="#f00"
-        app:strokeWidth="2dp"
         android:layout_height="100dp"
-        android:background="#f00"
-        app:shapeAppearanceOverlay="@style/Shape.Rounded" />
+        android:layout_gravity="center"
+        android:background="@color/gray"
+        android:scaleType="centerCrop" />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:alpha="0.5"
+        android:background="@color/white"
+        app:shapeAppearance="@style/Shape.Rounded"
+        app:srcCompat="@drawable/ic_video"
+        app:tint="@color/black" />
+
+    <TextView
+        android:id="@+id/name"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/transparent_black"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:padding="4dp"
+        android:text="Name"
+        android:textColor="@color/white" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:layout_width="100dp"
+        android:id="@+id/select"
+        android:layout_height="100dp"
+        android:background="@color/transparent_black"
+        android:scaleType="centerInside"
+        app:srcCompat="@drawable/ic_check" />
+
 
 </FrameLayout>

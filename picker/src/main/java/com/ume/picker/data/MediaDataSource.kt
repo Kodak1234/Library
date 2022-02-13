@@ -12,7 +12,7 @@ class MediaDataSource(adapter: RecyclerView.Adapter<*>) : CursorDataSource<Media
         val name = cursor.getString(cursor.getColumnIndex(FileColumns.DISPLAY_NAME))
         val mime = cursor.getString(cursor.getColumnIndex(FileColumns.MIME_TYPE))
         val data = cursor.getString(cursor.getColumnIndex(FileColumns.DATA))
-        return MediaItem(name, data).apply {
+        return MediaItem(name, data, mime).apply {
             type = when {
                 mime == null -> MediaItem.Type.UNKNOWN
                 mime.contains("video") -> MediaItem.Type.VIDEO
