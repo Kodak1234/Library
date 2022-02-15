@@ -15,6 +15,6 @@
         android:name="com.ume.picker.ui.PickerFragment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:picker_types="image|video" />
+        app:picker_types="video" />
 
 </LinearLayout>

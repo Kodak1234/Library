@@ -77,6 +77,7 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
         )
         list.layoutManager = mn
         model.cursor.observe(viewLifecycleOwner) {
+            selector.selectedPositions?.clear()
             source.cursor = it
         }
 

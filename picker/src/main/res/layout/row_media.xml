@@ -14,33 +14,48 @@
         android:background="@color/gray"
         android:scaleType="centerCrop" />
 
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/icon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:alpha="0.5"
-        android:background="@color/white"
-        app:shapeAppearance="@style/Shape.Rounded"
-        app:srcCompat="@drawable/ic_video"
-        app:tint="@color/black" />
-
-    <TextView
-        android:id="@+id/name"
+    <LinearLayout
+        android:id="@+id/info"
         android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="@color/transparent_black"
-        android:ellipsize="end"
-        android:gravity="center"
-        android:maxLines="1"
-        android:padding="4dp"
-        android:text="Name"
-        android:textColor="@color/white" />
+        android:background="@drawable/overlay_gradient"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            app:srcCompat="@drawable/ic_video" />
+
+        <TextView
+            android:id="@+id/name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:padding="4dp"
+            android:textColor="@color/white" />
+
+        <TextView
+            android:id="@+id/duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:padding="4dp"
+            android:text="0:00"
+            android:textColor="@color/white" />
+
+    </LinearLayout>
 
     <androidx.appcompat.widget.AppCompatImageView
-        android:layout_width="100dp"
         android:id="@+id/select"
+        android:layout_width="100dp"
         android:layout_height="100dp"
         android:background="@color/transparent_black"
         android:scaleType="centerInside"
