@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.NO_POSITION
 import com.ume.adapter.DelegateAdapter
 import com.ume.adapter.DelegateHolder
 import com.ume.adapter.callback.AdapterItemListener
@@ -29,11 +30,12 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
 
     private lateinit var adapter: DelegateAdapter
     private lateinit var source: MediaDataSource
+    private var lastPos = NO_POSITION
     private var config: Config? = null
     private val callback: Callback? by lazy {
         (parentFragment as? Callback?) ?: (context as? Callback?)
     }
-    private val selector by lazy { SelectionHelper(adapter, true) }
+    private val selector by lazy { SelectionHelper(adapter, config!!.allowMultiple) }
     private val model by lazy {
         ViewModelProvider(
             this,
@@ -50,12 +52,14 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
         val span = a.getInt(R.styleable.Picker_picker_spanCount, -1)
         val orientation = a.getInt(R.styleable.Picker_picker_orientation, RecyclerView.VERTICAL)
         val types = a.getInt(R.styleable.Picker_picker_types, 0)
-        config = Config(span, orientation, types)
+        val multiple = a.getBoolean(R.styleable.Picker_picker_multiple_selection, true)
+        config = Config(span, orientation, types, multiple)
         a.recycle()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lastPos = savedInstanceState?.getInt(POS, lastPos) ?: lastPos
         config = config ?: savedInstanceState?.getParcelable(CONFIG)
         config = config ?: arguments?.getParcelable(CONFIG)
         adapter = DelegateAdapter(requireContext())
@@ -67,7 +71,7 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
         if (checkSelfPermission(requireContext(), READ_EXTERNAL_STORAGE)
             == PackageManager.PERMISSION_GRANTED
         ) {
-            model.load()
+            reload()
         }
     }
 
@@ -99,27 +103,45 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
         super.onSaveInstanceState(outState)
         selector.save(outState)
         outState.putParcelable(CONFIG, config)
+        outState.putInt(POS, lastPos)
     }
 
     override fun onAdapterItemClicked(holder: RecyclerView.ViewHolder, v: View) {
         super.onAdapterItemClicked(holder, v)
         val item = (holder as DelegateHolder).item<MediaItem>()
         selector.checkItem({
-            if (this) {
+            lastPos = if (this) {
+                if (!config!!.allowMultiple && lastPos != NO_POSITION) {
+                    callback?.onMediaUnSelected(adapter.getItem(lastPos)!!)
+                    adapter.notifyItemChanged(lastPos)
+                }
                 //uncheck if callback returns false
                 if (callback?.onMediaSelected(item) == false)
                     selector.select(holder.bindingAdapterPosition, true)
-            } else
+                holder.bindingAdapterPosition
+            } else {
                 callback?.onMediaUnSelected(item)
+                NO_POSITION
+            }
         }, holder.bindingAdapterPosition)
+    }
+
+    fun reload() {
+        model.load()
     }
 
     companion object {
         const val CONFIG = "com.ume.picker.config"
+        private const val POS = "com.ume.picker.last-pos"
     }
 
     @Parcelize
-    class Config(var spanCount: Int, val orientation: Int, val types: Int) : Parcelable
+    class Config(
+        var spanCount: Int,
+        val orientation: Int,
+        val types: Int,
+        val allowMultiple: Boolean
+    ) : Parcelable
 
     interface Callback {
         /**

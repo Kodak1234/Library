@@ -11,5 +11,6 @@
             <flag name="video" value="0x2" />
             <flag name="audio" value="0x4" />
         </attr>
+        <attr name="picker_multiple_selection" format="boolean" />
     </declare-styleable>
 </resources>
