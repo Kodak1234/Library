@@ -14,6 +14,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ume.adapter.DelegateAdapter
+import com.ume.adapter.DelegateHolder
 import com.ume.adapter.callback.AdapterItemListener
 import com.ume.picker.R
 import com.ume.picker.data.MediaDataSource
@@ -29,6 +30,9 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
     private lateinit var adapter: DelegateAdapter
     private lateinit var source: MediaDataSource
     private var config: Config? = null
+    private val callback: Callback? by lazy {
+        (parentFragment as? Callback?) ?: (context as? Callback?)
+    }
     private val selector by lazy { SelectionHelper(adapter, true) }
     private val model by lazy {
         ViewModelProvider(
@@ -77,8 +81,8 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
         )
         list.layoutManager = mn
         model.cursor.observe(viewLifecycleOwner) {
-            selector.selectedPositions?.clear()
             source.cursor = it
+            callback?.onMediaSizeChanged(adapter.itemCount)
         }
 
         if (config!!.spanCount == -1) {
@@ -97,6 +101,19 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
         outState.putParcelable(CONFIG, config)
     }
 
+    override fun onAdapterItemClicked(holder: RecyclerView.ViewHolder, v: View) {
+        super.onAdapterItemClicked(holder, v)
+        val item = (holder as DelegateHolder).item<MediaItem>()
+        selector.checkItem({
+            if (this) {
+                //uncheck if callback returns false
+                if (callback?.onMediaSelected(item) == false)
+                    selector.select(holder.bindingAdapterPosition, true)
+            } else
+                callback?.onMediaUnSelected(item)
+        }, holder.bindingAdapterPosition)
+    }
+
     companion object {
         const val CONFIG = "com.ume.picker.config"
     }
@@ -110,18 +127,18 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
          * @param media media that was selected
          * @return true to select the item, false to unselect
          */
-        fun onMediaSelected(media: MediaItem): Boolean
+        fun onMediaSelected(media: MediaItem): Boolean = true
 
         /**
          * Called when user unselects a media
          * @param media media that was unselected
          */
-        fun onMediaUnSelected(media: MediaItem)
+        fun onMediaUnSelected(media: MediaItem) {}
 
         /**
          * Called when media size changes
          * @param size number of media loaded from system
          */
-        fun onMediaSizeChanged(size: Int)
+        fun onMediaSizeChanged(size: Int) {}
     }
 }

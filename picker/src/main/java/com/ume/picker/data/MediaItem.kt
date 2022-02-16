@@ -54,11 +54,11 @@ data class MediaItem(
             viewRef = null
         }
 
-        fun updateView(view: TextView) {
+        fun updateView(view: TextView?) {
             if (viewRef != view) {
                 viewRef?.removeOnAttachStateChangeListener(this)
                 viewRef = view
-                view.addOnAttachStateChangeListener(this)
+                view?.addOnAttachStateChangeListener(this)
             }
         }
 
@@ -71,6 +71,7 @@ data class MediaItem(
             withContext(Dispatchers.Main) {
                 viewRef?.text = item.duration.toDuration()
                 item.clearJob()
+                updateView(null)
             }
         }
     }
