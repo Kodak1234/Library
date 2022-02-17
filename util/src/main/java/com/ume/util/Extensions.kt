@@ -1,9 +1,13 @@
 package com.ume.util
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.os.Build
 import android.util.TypedValue
 import androidx.annotation.ChecksSdkIntAtLeast
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import java.lang.StringBuilder
 
 fun Long.toDuration(): String {
@@ -38,6 +42,12 @@ fun Resources.dp(value: Int) = TypedValue.applyDimension(
     TypedValue.COMPLEX_UNIT_DIP,
     value.toFloat(), displayMetrics
 ).toInt()
+
+fun Context.hasPermission(perm: String): Boolean {
+    return ContextCompat.checkSelfPermission(this, perm) == PackageManager.PERMISSION_GRANTED
+}
+
+fun Fragment.hasPermission(perm: String): Boolean = requireContext().hasPermission(perm)
 
 
 @ChecksSdkIntAtLeast(parameter = 0)

@@ -2,12 +2,10 @@ package com.ume.picker.ui
 
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.AttributeSet
 import android.view.View
-import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -23,8 +21,9 @@ import com.ume.picker.data.MediaItem
 import com.ume.selection.SelectionHelper
 import com.ume.util.OffsetItemDecoration
 import com.ume.util.dp
+import com.ume.util.hasPermission
 import kotlinx.parcelize.Parcelize
-import kotlin.math.max;
+import kotlin.math.max
 
 class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
 
@@ -68,11 +67,6 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
         adapter.source = source
         selector.restore(savedInstanceState)
 
-        if (checkSelfPermission(requireContext(), READ_EXTERNAL_STORAGE)
-            == PackageManager.PERMISSION_GRANTED
-        ) {
-            reload()
-        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
