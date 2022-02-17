@@ -67,6 +67,8 @@ class PickerFragment : Fragment(R.layout.fragment_picker), AdapterItemListener {
         adapter.source = source
         selector.restore(savedInstanceState)
 
+        if (hasPermission(READ_EXTERNAL_STORAGE))
+            reload()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
