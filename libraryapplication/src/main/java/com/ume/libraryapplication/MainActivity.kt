@@ -1,6 +1,7 @@
 package com.ume.libraryapplication
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -13,12 +14,25 @@ import com.ume.guidedtour.impl.AsynchronousSceneManager
 import com.ume.guidedtour.impl.NoOpDictator
 import com.ume.guidedtour.impl.NoOpWatcher
 import com.ume.phone.PhoneUtil
+import com.ume.picker.data.MediaItem
+import com.ume.util.setEnable
 
 class MainActivity : AppCompatActivity() {
     private lateinit var sceneMn: ISceneManager
+    private lateinit var item: MediaItem
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        item = if (savedInstanceState == null) {
+            MediaItem(
+                "test", "data", "img",
+                100
+            ).apply { type = MediaItem.Type.IMAGE }
+        } else savedInstanceState.getParcelable("Item")!!
+
+        if (savedInstanceState != null)
+            Log.i("MediaItem", "onCreate: $item")
 
         val v = findViewById<TextView>(R.id.text)
         v.text = PhoneUtil.create(this)
@@ -33,7 +47,7 @@ class MainActivity : AppCompatActivity() {
         val show = findViewById<View>(R.id.showSheet)
         val close = findViewById<View>(R.id.closeButton)
         show.setOnClickListener {
-            mn.showBottomSheet(BottomSheetExample(),"Hello")
+            mn.showBottomSheet(BottomSheetExample(), "Hello")
         }
         close.setOnClickListener {
             mn.hideBottomSheet()
@@ -54,6 +68,11 @@ class MainActivity : AppCompatActivity() {
                 NoOpWatcher()
             )
         )
-        //sceneMn.beginTour(1000)
+        sceneMn.beginTour(1000)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putParcelable("Item", item)
     }
 }

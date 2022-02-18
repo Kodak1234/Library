@@ -2,6 +2,7 @@ package com.ume.picker.data
 
 import android.media.MediaMetadataRetriever
 import android.media.MediaMetadataRetriever.METADATA_KEY_DURATION
+import android.os.Parcelable
 import android.text.format.DateUtils
 import android.view.View
 import android.widget.TextView
@@ -11,15 +12,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.parcelize.IgnoredOnParcel
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class MediaItem(
     val name: String,
     val data: String,
     val mime: String,
-) : AdapterItem() {
+    var duration: Long = -1L
+) : AdapterItem(), Parcelable {
 
+    @IgnoredOnParcel
     internal var runAnim = true
-    private var duration = -1L
+
 
     companion object {
         private val metaScope = CoroutineScope(Dispatchers.IO)
@@ -80,6 +86,10 @@ data class MediaItem(
         const val IMAGE = 1
         const val VIDEO = 1 shl 1
         const val AUDIO = 1 shl 2
-        const val UNKNOWN = 1 shl 4
+        const val UNKNOWN = 1 shl 3
+    }
+
+    override fun toString(): String {
+        return "MediaItem(name='$name', data='$data', mime='$mime', duration=$duration, type=$type)"
     }
 }

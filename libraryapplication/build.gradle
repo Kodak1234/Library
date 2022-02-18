@@ -44,4 +44,5 @@ dependencies {
     implementation project(path: ':bottomsheet')
     implementation project(path: ':guidedtour')
     implementation project(path: ':adapter')
+    implementation project(path: ':util')
 }
