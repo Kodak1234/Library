@@ -1,5 +1,6 @@
 package com.ume.libraryapplication
 
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -26,7 +27,7 @@ class MainActivity : AppCompatActivity() {
 
         item = if (savedInstanceState == null) {
             MediaItem(
-                "test", "data", "img",
+                "test", Uri.EMPTY, "img",
                 100
             ).apply { type = MediaItem.Type.IMAGE }
         } else savedInstanceState.getParcelable("Item")!!

@@ -1,5 +1,7 @@
 package com.ume.libraryapplication
 
+import android.Manifest
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Bundle
@@ -9,6 +11,7 @@ import android.widget.TextView
 import com.ume.bottomsheet.BottomSheetFragment
 import com.ume.picker.data.MediaItem
 import com.ume.picker.ui.PickerFragment
+import com.ume.util.hasPermission
 
 class BottomSheetExample : BottomSheetFragment(R.layout.fragment_bottom_sheet),
     PickerFragment.Callback {
@@ -19,6 +22,11 @@ class BottomSheetExample : BottomSheetFragment(R.layout.fragment_bottom_sheet),
     private lateinit var title: TextView
 
 
+    override fun onStart() {
+        super.onStart()
+        if (!hasPermission(READ_EXTERNAL_STORAGE))
+            requestPermissions(arrayOf(READ_EXTERNAL_STORAGE), 11)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -27,7 +35,7 @@ class BottomSheetExample : BottomSheetFragment(R.layout.fragment_bottom_sheet),
 
     override fun onMediaSelected(media: MediaItem): Boolean {
         Log.i(TAG, "onMediaSelected: ")
-        if(count == 6)
+        if (count == 6)
             return false
         count++
         update()

@@ -1,7 +1,10 @@
 package com.ume.picker.data
 
 import android.annotation.SuppressLint
+import android.content.ContentUris
 import android.database.Cursor
+import android.net.Uri
+import android.provider.MediaStore
 import android.provider.MediaStore.Files.FileColumns
 import androidx.recyclerview.widget.RecyclerView
 
@@ -11,7 +14,9 @@ class MediaDataSource(adapter: RecyclerView.Adapter<*>) : CursorDataSource<Media
     override fun parse(cursor: Cursor): MediaItem {
         val name = cursor.getString(cursor.getColumnIndex(FileColumns.DISPLAY_NAME))
         val mime = cursor.getString(cursor.getColumnIndex(FileColumns.MIME_TYPE))
-        val data = cursor.getString(cursor.getColumnIndex(FileColumns.DATA))
+        val id = cursor.getLong(cursor.getColumnIndex(FileColumns._ID))
+        val baseUri = MediaStore.Files.getContentUri("external")
+        val data = ContentUris.withAppendedId(baseUri, id)
         return MediaItem(name, data, mime).apply {
             type = when {
                 mime == null -> MediaItem.Type.UNKNOWN

@@ -6,7 +6,6 @@ import android.database.Cursor
 import android.provider.MediaStore
 import android.provider.MediaStore.Files.FileColumns
 import androidx.lifecycle.*
-import androidx.paging.PagingData
 import com.ume.picker.data.MediaItem
 import com.ume.util.BitFlag
 import kotlinx.coroutines.Dispatchers
@@ -25,19 +24,32 @@ class MediaDataViewModel(
 
     init {
         val mimes = mapOf(
-            MediaItem.Type.AUDIO to "audio/%",
-            MediaItem.Type.IMAGE to "image/%",
-            MediaItem.Type.VIDEO to "video/%"
+            MediaItem.Type.AUDIO to "audio",
+            MediaItem.Type.IMAGE to "image",
+            MediaItem.Type.VIDEO to "video"
         )
 
         val flag = BitFlag(types)
         for (e in mimes.entries) {
             if (flag.has(e.key)) {
                 if (mimeFilter.isNotEmpty())
-                    mimeFilter.append(" OR ")
-                mimeFilter.append("${FileColumns.MIME_TYPE} LIKE ?")
+                    mimeFilter.append(",")
+                mimeFilter.append("?")
                 mimeArg.add(e.value)
             }
+        }
+
+        if (mimeFilter.isNotEmpty()) {
+            mimeFilter.insert(0, "SUBSTR(${FileColumns.MIME_TYPE},1,5) IN (")
+            mimeFilter.append(")")
+        }
+
+        if (flag.has(MediaItem.Type.UNKNOWN)) {
+            if (mimeFilter.isNotEmpty())
+                mimeFilter.append(" OR ")
+            mimeFilter.append("SUBSTR(${FileColumns.MIME_TYPE},1,5) NOT IN (?,?,?)")
+            for (value in mimes.values)
+                mimeArg.add(value)
         }
 
     }
@@ -52,7 +64,7 @@ class MediaDataViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val c = app.contentResolver.query(
                 MediaStore.Files.getContentUri("external"),
-                arrayOf(FileColumns.MIME_TYPE, FileColumns.DATA, FileColumns.DISPLAY_NAME),
+                arrayOf(FileColumns.MIME_TYPE, FileColumns._ID, FileColumns.DISPLAY_NAME),
                 mimeFilter.toString(), mimeArg.toTypedArray(), "${FileColumns.DATE_ADDED} DESC"
             )
             withContext(Dispatchers.Main) {

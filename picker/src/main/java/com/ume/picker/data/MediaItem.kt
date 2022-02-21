@@ -1,7 +1,9 @@
 package com.ume.picker.data
 
+import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.media.MediaMetadataRetriever.METADATA_KEY_DURATION
+import android.net.Uri
 import android.os.Parcelable
 import android.text.format.DateUtils
 import android.view.View
@@ -18,7 +20,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class MediaItem(
     val name: String,
-    val data: String,
+    val data: Uri,
     val mime: String,
     var duration: Long = -1L
 ) : AdapterItem(), Parcelable {
@@ -35,7 +37,7 @@ data class MediaItem(
                 duration != -1L -> textView.text = duration.toDuration()
                 jobs[this] != null -> jobs[this]!!.updateView(textView)
                 else -> {
-                    val job = MetaDataWorker(this)
+                    val job = MetaDataWorker(this, textView.context.applicationContext)
                     job.updateView(textView)
                     jobs[this] = job
                     metaScope.launch { job.execute() }
@@ -48,7 +50,10 @@ data class MediaItem(
         }
     }
 
-    private class MetaDataWorker(private val item: MediaItem) :
+    private class MetaDataWorker(
+        private val item: MediaItem,
+        private val context: Context
+    ) :
         View.OnAttachStateChangeListener {
         var viewRef: TextView? = null
 
@@ -70,7 +75,7 @@ data class MediaItem(
 
         suspend fun execute() {
             val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(item.data)
+            retriever.setDataSource(context, item.data)
             val d = retriever.extractMetadata(METADATA_KEY_DURATION)?.toLong()
             retriever.release()
             item.duration = d ?: 0

@@ -22,7 +22,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:picker_multiple_selection="true"
-        app:picker_types="video|image"
+        app:picker_types="image|audio"
         tools:layout="@layout/fragment_picker" />
 
 </LinearLayout>

@@ -3,6 +3,7 @@ package com.ume.picker.ui
 import android.graphics.drawable.Animatable2
 import android.graphics.drawable.AnimatedVectorDrawable
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
@@ -27,6 +28,7 @@ import com.ume.picker.data.MediaItem.Type
 import com.ume.selection.SelectionHelper
 import com.ume.util.dp
 import com.ume.util.sdkAtLeast
+import java.io.File
 
 class MediaDelegate(
     private val selector: SelectionHelper,
