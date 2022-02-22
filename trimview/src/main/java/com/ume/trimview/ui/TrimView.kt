@@ -4,14 +4,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.util.AttributeSet
-import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
-import android.view.TouchDelegate
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.FrameLayout.LayoutParams.MATCH_PARENT
@@ -21,7 +18,6 @@ import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.view.ViewCompat
 import androidx.customview.widget.ViewDragHelper
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.shape.MaterialShapeDrawable
@@ -33,6 +29,7 @@ import kotlin.math.min
 
 class TrimView : FrameLayout {
 
+    private var duration: Long = 0L
     private val leftHandle = AppCompatImageView(context)
     private val rightHandle = AppCompatImageView(context)
     private val seekHandle = AppCompatImageView(context)
@@ -40,8 +37,9 @@ class TrimView : FrameLayout {
     private val adapter = DelegateAdapter(context)
     private val frameSrc = FrameSource(adapter, resources.dp(50))
     private val list = RecyclerView(context)
-    private val dragHelper = ViewDragHelper.create(this, 4f, DragCallback())
+    private val dragHelper = ViewDragHelper.create(this, 16f, DragCallback())
     private val bg: MaterialShapeDrawable
+    var positionChangeListener: PositionChangeListener? = null
 
     init {
 
@@ -77,7 +75,12 @@ class TrimView : FrameLayout {
     constructor(context: Context) : this(context, null)
 
     constructor(context: Context, attr: AttributeSet?) : super(context, attr) {
-        val a = context.obtainStyledAttributes(attr, R.styleable.TrimView, 0, 0)
+        val a = context.obtainStyledAttributes(
+            attr,
+            R.styleable.TrimView,
+            R.attr.trimViewStyle,
+            R.style.TrimViewStyle
+        )
         val leftD = a.getResourceId(R.styleable.TrimView_leftHandlerDrawable, 0)
         val rightD = a.getResourceId(R.styleable.TrimView_rightHandleDrawable, 0)
         val seekD = a.getResourceId(R.styleable.TrimView_seekHandleDrawable, 0)
@@ -109,22 +112,17 @@ class TrimView : FrameLayout {
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         frameSrc.onUpdate(width)
-
-        val padding = resources.dp(12)
-        /*leftHandle.setOnTouchListener(TouchTargetHelper(leftHandle, padding))
-        rightHandle.setOnTouchListener(TouchTargetHelper(rightHandle, padding))
-        seekHandle.setOnTouchListener(TouchTargetHelper(seekHandle, padding))*/
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)
         rangeView.layout(leftHandle.right, rangeView.top, rightHandle.right, rangeView.bottom)
-        /*seekHandle.layout(
+        seekHandle.layout(
             leftHandle.right,
             seekHandle.top,
-            leftHandle.left + seekHandle.width,
+            leftHandle.right + seekHandle.width,
             seekHandle.bottom
-        )*/
+        )
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
@@ -143,6 +141,7 @@ class TrimView : FrameLayout {
     }
 
     fun setUri(uri: Uri, duration: Long) {
+        this.duration = duration
         frameSrc.uri = uri
         frameSrc.duration = duration
         if (ViewCompat.isLaidOut(this))
@@ -164,6 +163,46 @@ class TrimView : FrameLayout {
             seekHandle.setImageResource(id)
     }
 
+    private fun dispatchPositionChanged(vararg handles: View) {
+        positionChangeListener?.let { listener ->
+            for (handle in handles) {
+                val pos = computePosition(handle)
+                when (handle) {
+                    leftHandle -> listener.onLeftPositionChanged(pos, handle)
+                    rightHandle -> listener.onRightPositionChanged(pos, handle)
+                    seekHandle -> listener.onSeekPositionChanged(pos, handle)
+                }
+            }
+        }
+    }
+
+    private fun dispatchHandleReleased(vararg handles: View) {
+        positionChangeListener?.let { listener ->
+            for (handle in handles) {
+                when (handle) {
+                    leftHandle -> listener.onLeftHandleReleased(handle)
+                    rightHandle -> listener.onRightHandleReleased(handle)
+                    seekHandle -> listener.onSeekHandleReleased(handle)
+                }
+            }
+        }
+    }
+
+    private fun computePosition(handle: View): Long {
+        val maxWidth = 1f * (width - paddingRight) - paddingLeft
+        return when (handle) {
+            rightHandle -> (handle.right - paddingRight) / maxWidth * duration
+            leftHandle -> (handle.left - paddingLeft) / maxWidth * duration
+            else -> {
+                when {
+                    seekHandle.right >= rightHandle.left -> computePosition(rightHandle)
+                    seekHandle.left <= leftHandle.right -> computePosition(leftHandle)
+                    else -> (handle.left - paddingLeft) / maxWidth * duration
+                }
+            }
+        }.toLong()
+    }
+
     private inner class DragCallback : ViewDragHelper.Callback() {
         override fun tryCaptureView(child: View, pointerId: Int): Boolean {
             return when (child) {
@@ -174,8 +213,14 @@ class TrimView : FrameLayout {
 
         override fun clampViewPositionHorizontal(child: View, left: Int, dx: Int): Int {
             return when (child) {
-                leftHandle -> min(max(paddingLeft, left), rightHandle.left - child.width)
-                rightHandle -> max(leftHandle.right, min(width - child.width - paddingRight, left))
+                leftHandle -> min(
+                    max(paddingLeft, left),
+                    rightHandle.left - child.width - seekHandle.width
+                )
+                rightHandle -> max(
+                    leftHandle.right + seekHandle.width,
+                    min(width - child.width - paddingRight, left)
+                )
                 seekHandle -> min(max(leftHandle.right, left), rightHandle.left - child.width)
                 rangeView -> {
                     min(
@@ -192,6 +237,16 @@ class TrimView : FrameLayout {
             return child.top
         }
 
+        override fun onViewReleased(child: View, xvel: Float, yvel: Float) {
+            super.onViewReleased(child, xvel, yvel)
+            when (child) {
+                seekHandle -> dispatchHandleReleased(child)
+                rangeView -> dispatchHandleReleased(leftHandle, rightHandle, seekHandle)
+                leftHandle -> dispatchHandleReleased(child)
+                rightHandle -> dispatchHandleReleased(child)
+            }
+        }
+
         override fun onViewPositionChanged(
             child: View,
             left: Int,
@@ -201,20 +256,28 @@ class TrimView : FrameLayout {
         ) {
             super.onViewPositionChanged(child, left, top, dx, dy)
             when (child) {
+                seekHandle -> dispatchPositionChanged(seekHandle)
                 rangeView -> {
                     ViewCompat.offsetLeftAndRight(leftHandle, dx)
                     ViewCompat.offsetLeftAndRight(rightHandle, dx)
                     ViewCompat.offsetLeftAndRight(seekHandle, dx)
+                    dispatchPositionChanged(leftHandle, rightHandle, seekHandle)
                 }
                 leftHandle -> {
                     rangeView.left += dx
-                    /*if (seekHandle.left <= child.right && dx > 0)
-                        seekHandle.left += dx*/
+                    if (seekHandle.left <= child.right && dx > 0) {
+                        ViewCompat.offsetLeftAndRight(seekHandle, dx)
+                        dispatchPositionChanged(seekHandle)
+                    }
+                    dispatchPositionChanged(leftHandle)
                 }
                 rightHandle -> {
                     rangeView.right += dx
-                    if (seekHandle.right >= child.left && dx < 0)
-                        seekHandle.left += dx
+                    if (seekHandle.right >= child.left && dx < 0) {
+                        ViewCompat.offsetLeftAndRight(seekHandle, dx)
+                        dispatchPositionChanged(seekHandle)
+                    }
+                    dispatchPositionChanged(rightHandle)
                 }
             }
         }
@@ -227,35 +290,16 @@ class TrimView : FrameLayout {
                 dragHelper.captureChildView(leftHandle, pointerId)
             else if (edgeFlags == ViewDragHelper.EDGE_RIGHT && rightHandle.right == width)
                 dragHelper.captureChildView(rightHandle, pointerId)
-            Log.i("EdgeDrag", "onEdgeDragStarted: ")
         }
     }
 
-    class TouchTargetHelper(
-        view: View,
-        padding: Int
-    ) : OnTouchListener {
-        private val delegate: TouchDelegate
-
-        init {
-            val rect = Rect()
-            view.getHitRect(rect)
-            rect.top -= padding;
-            rect.left -= padding;
-            rect.right += padding;
-            rect.bottom += padding;
-            delegate = TouchDelegate(rect, view)
-
-            val c = ColorDrawable(Color.parseColor("#100000ff"))
-            c.bounds = rect
-            view.overlay.clear()
-            view.overlay.add(c)
-        }
-
-        @SuppressLint("ClickableViewAccessibility")
-        override fun onTouch(p0: View?, p1: MotionEvent): Boolean {
-            return delegate.onTouchEvent(p1) ?: false
-        }
+    interface PositionChangeListener {
+        fun onLeftPositionChanged(pos: Long, leftHandle: View) {}
+        fun onRightPositionChanged(pos: Long, rightHandle: View) {}
+        fun onSeekPositionChanged(pos: Long, seekHandle: View) {}
+        fun onLeftHandleReleased(handle: View) {}
+        fun onRightHandleReleased(handle: View) {}
+        fun onSeekHandleReleased(handle: View) {}
     }
 
 }
