@@ -240,10 +240,8 @@ class TrimView : FrameLayout {
         override fun onViewReleased(child: View, xvel: Float, yvel: Float) {
             super.onViewReleased(child, xvel, yvel)
             when (child) {
-                seekHandle -> dispatchHandleReleased(child)
                 rangeView -> dispatchHandleReleased(leftHandle, rightHandle, seekHandle)
-                leftHandle -> dispatchHandleReleased(child)
-                rightHandle -> dispatchHandleReleased(child)
+                else -> dispatchHandleReleased(child)
             }
         }
 
