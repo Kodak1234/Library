@@ -1,10 +1,9 @@
 package com.ume.libraryapplication
 
-import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -14,26 +13,22 @@ import com.ume.guidedtour.Scene
 import com.ume.guidedtour.impl.AsynchronousSceneManager
 import com.ume.guidedtour.impl.NoOpDictator
 import com.ume.guidedtour.impl.NoOpWatcher
+import com.ume.libraryapplication.screens.TrimFragment
 import com.ume.phone.PhoneUtil
-import com.ume.picker.data.MediaItem
-import com.ume.util.setEnable
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ScreenFragment.ScreenSelectionListener {
     private lateinit var sceneMn: ISceneManager
-    private lateinit var item: MediaItem
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        item = if (savedInstanceState == null) {
-            MediaItem(
-                "test", Uri.EMPTY, "img",
-                100
-            ).apply { type = MediaItem.Type.IMAGE }
-        } else savedInstanceState.getParcelable("Item")!!
-
-        if (savedInstanceState != null)
-            Log.i("MediaItem", "onCreate: $item")
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .add(R.id.fraContainer, ScreenFragment())
+                .addToBackStack(null)
+                .commit()
+        }
 
         val v = findViewById<TextView>(R.id.text)
         v.text = PhoneUtil.create(this)
@@ -69,11 +64,20 @@ class MainActivity : AppCompatActivity() {
                 NoOpWatcher()
             )
         )
-        sceneMn.beginTour(1000)
+        //sceneMn.beginTour(1000)
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putParcelable("Item", item)
+    override fun onScreenSelected(screen: ScreenFragment.Screen) {
+        val frag = when (screen.id) {
+            ScreenFragment.TRIM_SCREEN -> TrimFragment()
+            else -> null
+        }
+
+        if (frag != null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fraContainer, frag)
+                .addToBackStack(null)
+                .commit()
+        }
     }
 }

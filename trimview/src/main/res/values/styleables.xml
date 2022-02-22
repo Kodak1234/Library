@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="TrimView">
+        <attr name="leftHandlerDrawable" format="reference" />
+        <attr name="rightHandleDrawable" format="reference" />
+        <attr name="seekHandleDrawable" format="reference" />
+        <attr name="rangeBackgroundColor" format="color" />
+        <attr name="strokeColor" />
+        <attr name="strokeWidth" />
+    </declare-styleable>
+</resources>
