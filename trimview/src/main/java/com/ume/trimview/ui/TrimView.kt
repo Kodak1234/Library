@@ -33,13 +33,19 @@ class TrimView : FrameLayout {
     private val leftHandle = AppCompatImageView(context)
     private val rightHandle = AppCompatImageView(context)
     private val seekHandle = AppCompatImageView(context)
-    private val rangeView = AppCompatImageView(context)
+    private val leftRange = AppCompatImageView(context)
+    private val rightRange = AppCompatImageView(context)
     private val adapter = DelegateAdapter(context)
     private val frameSrc = FrameSource(adapter, resources.dp(50))
     private val list = RecyclerView(context)
     private val dragHelper = ViewDragHelper.create(this, 16f, DragCallback())
     private val bg: MaterialShapeDrawable
-    var positionChangeListener: PositionChangeListener? = null
+    private val minDuration = 5000L
+    private val maxDuration = 10000L
+    private val maxWidth: Float
+        get() = 1f * (width - paddingRight) - paddingLeft
+
+    private val positionChangeListeners = mutableListOf<PositionChangeListener>(Listener())
 
     init {
 
@@ -58,17 +64,15 @@ class TrimView : FrameLayout {
 
         list.setBackgroundColor(Color.BLUE)
         addView(list, LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-        addView(rangeView, LayoutParams(MATCH_PARENT, MATCH_PARENT))
-        addView(
-            leftHandle,
-            LayoutParams(WRAP_CONTENT, MATCH_PARENT).apply { gravity = Gravity.LEFT })
-
-        addView(
-            rightHandle,
-            LayoutParams(WRAP_CONTENT, MATCH_PARENT).apply { gravity = Gravity.RIGHT })
-        addView(
-            seekHandle,
-            LayoutParams(WRAP_CONTENT, MATCH_PARENT).apply { gravity = Gravity.CENTER })
+        addView(leftRange, LayoutParams(WRAP_CONTENT, MATCH_PARENT))
+        addView(rightRange, LayoutParams(WRAP_CONTENT, MATCH_PARENT)
+            .apply { gravity = Gravity.RIGHT })
+        addView(leftHandle, LayoutParams(WRAP_CONTENT, MATCH_PARENT)
+            .apply { gravity = Gravity.LEFT })
+        addView(rightHandle, LayoutParams(WRAP_CONTENT, MATCH_PARENT)
+            .apply { gravity = Gravity.RIGHT })
+        addView(seekHandle, LayoutParams(WRAP_CONTENT, MATCH_PARENT)
+            .apply { gravity = Gravity.CENTER })
 
     }
 
@@ -88,8 +92,10 @@ class TrimView : FrameLayout {
         val rangeBg = a.getColor(R.styleable.TrimView_rangeBackgroundColor, Color.BLACK)
         val strokeW = a.getDimension(R.styleable.TrimView_strokeWidth, 0f)
 
-        rangeView.setBackgroundColor(rangeBg)
-        rangeView.alpha = 0.5f
+        ViewCompat.setBackground(leftRange, ColorDrawable(rangeBg)
+            .apply { alpha = 200 })
+        ViewCompat.setBackground(rightRange, ColorDrawable(rangeBg)
+            .apply { alpha = 200 })
 
         setLeftHandleDrawableRes(leftD)
         setRightHandleDrawableRes(rightD)
@@ -116,7 +122,6 @@ class TrimView : FrameLayout {
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)
-        rangeView.layout(leftHandle.right, rangeView.top, rightHandle.right, rangeView.bottom)
         seekHandle.layout(
             leftHandle.right,
             seekHandle.top,
@@ -163,10 +168,18 @@ class TrimView : FrameLayout {
             seekHandle.setImageResource(id)
     }
 
+    fun addPositionListener(listener: PositionChangeListener) {
+        positionChangeListeners += listener
+    }
+
+    fun removePositionListener(listener: PositionChangeListener) {
+        positionChangeListeners -= listener
+    }
+
     private fun dispatchPositionChanged(vararg handles: View) {
-        positionChangeListener?.let { listener ->
-            for (handle in handles) {
-                val pos = computePosition(handle)
+        for (handle in handles) {
+            val pos = computeDuration(handle)
+            for (listener in positionChangeListeners) {
                 when (handle) {
                     leftHandle -> listener.onLeftPositionChanged(pos, handle)
                     rightHandle -> listener.onRightPositionChanged(pos, handle)
@@ -177,8 +190,8 @@ class TrimView : FrameLayout {
     }
 
     private fun dispatchHandleReleased(vararg handles: View) {
-        positionChangeListener?.let { listener ->
-            for (handle in handles) {
+        for (handle in handles) {
+            for (listener in positionChangeListeners) {
                 when (handle) {
                     leftHandle -> listener.onLeftHandleReleased(handle)
                     rightHandle -> listener.onRightHandleReleased(handle)
@@ -188,60 +201,67 @@ class TrimView : FrameLayout {
         }
     }
 
-    private fun computePosition(handle: View): Long {
-        val maxWidth = 1f * (width - paddingRight) - paddingLeft
+    private fun computeDuration(handle: View): Long {
+
         return when (handle) {
             rightHandle -> (handle.right - paddingRight) / maxWidth * duration
             leftHandle -> (handle.left - paddingLeft) / maxWidth * duration
             else -> {
                 when {
-                    seekHandle.right >= rightHandle.left -> computePosition(rightHandle)
-                    seekHandle.left <= leftHandle.right -> computePosition(leftHandle)
+                    seekHandle.right >= rightHandle.left -> computeDuration(rightHandle)
+                    seekHandle.left <= leftHandle.right -> computeDuration(leftHandle)
                     else -> (handle.left - paddingLeft) / maxWidth * duration
                 }
             }
         }.toLong()
     }
 
+    private fun computePosition(duration: Long): Int =
+        ((maxWidth * duration) / this.duration).toInt()
+
+    private inner class Listener : PositionChangeListener {
+        override fun onRightPositionChanged(duration: Long, rightHandle: View) {
+            super.onRightPositionChanged(duration, rightHandle)
+            rightRange.left += (rightRange.left - rightHandle.right)
+        }
+
+        override fun onLeftPositionChanged(duration: Long, leftHandle: View) {
+            super.onLeftPositionChanged(duration, leftHandle)
+            leftRange.right += (leftHandle.left - leftRange.right)
+        }
+    }
+
     private inner class DragCallback : ViewDragHelper.Callback() {
         override fun tryCaptureView(child: View, pointerId: Int): Boolean {
             return when (child) {
-                leftHandle, rightHandle, seekHandle, rangeView -> true
+                leftHandle, rightHandle, seekHandle/*, rangeView */ -> true
                 else -> false
             }
         }
 
         override fun clampViewPositionHorizontal(child: View, left: Int, dx: Int): Int {
+            val minLen = computePosition(minDuration) + seekHandle.width
+            val maxLen = computePosition(maxDuration)
             return when (child) {
-                leftHandle -> min(
-                    max(paddingLeft, left),
-                    rightHandle.left - child.width - seekHandle.width
-                )
+                leftHandle -> {
+                    val newLeft = min(
+                        max(paddingLeft, left),
+                        rightHandle.left - child.width - seekHandle.width
+                    )
+
+                    if (newLeft + child.width >= rightHandle.left - minLen
+                        && rightHandle.right + dx >= width - paddingRight
+                    ) {
+                        child.left
+                    } else
+                        newLeft
+                }
                 rightHandle -> max(
                     leftHandle.right + seekHandle.width,
                     min(width - child.width - paddingRight, left)
                 )
                 seekHandle -> min(max(leftHandle.right, left), rightHandle.left - child.width)
-                rangeView -> {
-                    min(
-                        max(left, paddingLeft + leftHandle.width),
-                        width - paddingRight - child.width
-                    )
-                }
-
                 else -> left
-            }
-        }
-
-        override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
-            return child.top
-        }
-
-        override fun onViewReleased(child: View, xvel: Float, yvel: Float) {
-            super.onViewReleased(child, xvel, yvel)
-            when (child) {
-                rangeView -> dispatchHandleReleased(leftHandle, rightHandle, seekHandle)
-                else -> dispatchHandleReleased(child)
             }
         }
 
@@ -253,24 +273,23 @@ class TrimView : FrameLayout {
             dy: Int
         ) {
             super.onViewPositionChanged(child, left, top, dx, dy)
+            val minLen = computePosition(minDuration) + seekHandle.width
             when (child) {
                 seekHandle -> dispatchPositionChanged(seekHandle)
-                rangeView -> {
-                    ViewCompat.offsetLeftAndRight(leftHandle, dx)
-                    ViewCompat.offsetLeftAndRight(rightHandle, dx)
-                    ViewCompat.offsetLeftAndRight(seekHandle, dx)
-                    dispatchPositionChanged(leftHandle, rightHandle, seekHandle)
-                }
                 leftHandle -> {
-                    rangeView.left += dx
                     if (seekHandle.left <= child.right && dx > 0) {
                         ViewCompat.offsetLeftAndRight(seekHandle, dx)
                         dispatchPositionChanged(seekHandle)
                     }
+                    if (child.right >= rightHandle.left - minLen
+                        && rightHandle.right + dx < width - paddingRight
+                    ) {
+                        ViewCompat.offsetLeftAndRight(rightHandle, dx)
+                        dispatchPositionChanged(rightHandle)
+                    }
                     dispatchPositionChanged(leftHandle)
                 }
                 rightHandle -> {
-                    rangeView.right += dx
                     if (seekHandle.right >= child.left && dx < 0) {
                         ViewCompat.offsetLeftAndRight(seekHandle, dx)
                         dispatchPositionChanged(seekHandle)
@@ -278,6 +297,15 @@ class TrimView : FrameLayout {
                     dispatchPositionChanged(rightHandle)
                 }
             }
+        }
+
+        override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
+            return child.top
+        }
+
+        override fun onViewReleased(child: View, xvel: Float, yvel: Float) {
+            super.onViewReleased(child, xvel, yvel)
+            dispatchHandleReleased(child)
         }
 
         override fun getViewHorizontalDragRange(child: View): Int = 1
@@ -292,9 +320,9 @@ class TrimView : FrameLayout {
     }
 
     interface PositionChangeListener {
-        fun onLeftPositionChanged(pos: Long, leftHandle: View) {}
-        fun onRightPositionChanged(pos: Long, rightHandle: View) {}
-        fun onSeekPositionChanged(pos: Long, seekHandle: View) {}
+        fun onLeftPositionChanged(duration: Long, leftHandle: View) {}
+        fun onRightPositionChanged(duration: Long, rightHandle: View) {}
+        fun onSeekPositionChanged(duration: Long, seekHandle: View) {}
         fun onLeftHandleReleased(handle: View) {}
         fun onRightHandleReleased(handle: View) {}
         fun onSeekHandleReleased(handle: View) {}

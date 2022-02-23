@@ -37,7 +37,7 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         trim = view.findViewById(R.id.trim)
-        trim!!.positionChangeListener = this
+        trim!!.addPositionListener(this)
         launcher.launch(arrayOf("video/*"))
     }
 
