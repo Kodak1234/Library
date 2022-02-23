@@ -118,6 +118,8 @@ class TrimView : FrameLayout {
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         frameSrc.onUpdate(width)
+
+
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
@@ -223,11 +225,21 @@ class TrimView : FrameLayout {
         override fun onRightPositionChanged(duration: Long, rightHandle: View) {
             super.onRightPositionChanged(duration, rightHandle)
             rightRange.left += (rightHandle.right - rightRange.left)
+            val dx = rightHandle.left - seekHandle.right
+            if (dx < 0) {
+                ViewCompat.offsetLeftAndRight(seekHandle, dx)
+                dispatchPositionChanged(seekHandle)
+            }
         }
 
         override fun onLeftPositionChanged(duration: Long, leftHandle: View) {
             super.onLeftPositionChanged(duration, leftHandle)
             leftRange.right += (leftHandle.left - leftRange.right)
+            val dx = leftHandle.right - seekHandle.left
+            if (dx > 0) {
+                ViewCompat.offsetLeftAndRight(seekHandle, dx)
+                dispatchPositionChanged(seekHandle)
+            }
         }
     }
 
@@ -284,10 +296,6 @@ class TrimView : FrameLayout {
             when (child) {
                 seekHandle -> dispatchPositionChanged(seekHandle)
                 leftHandle -> {
-                    if (seekHandle.left <= child.right && dx > 0) {
-                        ViewCompat.offsetLeftAndRight(seekHandle, dx)
-                        dispatchPositionChanged(seekHandle)
-                    }
                     if (child.right >= rightHandle.left - minLen
                         && rightHandle.right + dx < width - paddingRight
                     ) {
@@ -297,11 +305,6 @@ class TrimView : FrameLayout {
                     dispatchPositionChanged(leftHandle)
                 }
                 rightHandle -> {
-                    if (seekHandle.right >= child.left && dx < 0) {
-                        ViewCompat.offsetLeftAndRight(seekHandle, dx)
-                        dispatchPositionChanged(seekHandle)
-                    }
-
                     if (child.left <= leftHandle.right + minLen && leftHandle.left + dx > paddingLeft) {
                         ViewCompat.offsetLeftAndRight(leftHandle, dx)
                         dispatchPositionChanged(leftHandle)
