@@ -38,7 +38,7 @@ class TrimView : FrameLayout {
     private val adapter = DelegateAdapter(context)
     private val frameSrc = FrameSource(adapter, resources.dp(50))
     private val list = RecyclerView(context)
-    private val dragHelper = ViewDragHelper.create(this, 16f, DragCallback())
+    private val dragHelper = ViewDragHelper.create(this, 1000f, DragCallback())
     private val bg: MaterialShapeDrawable
     private val minDuration = 5000L
     private val maxDuration = 10000L
@@ -222,7 +222,7 @@ class TrimView : FrameLayout {
     private inner class Listener : PositionChangeListener {
         override fun onRightPositionChanged(duration: Long, rightHandle: View) {
             super.onRightPositionChanged(duration, rightHandle)
-            rightRange.left += (rightRange.left - rightHandle.right)
+            rightRange.left += (rightHandle.right - rightRange.left)
         }
 
         override fun onLeftPositionChanged(duration: Long, leftHandle: View) {
@@ -256,10 +256,17 @@ class TrimView : FrameLayout {
                     } else
                         newLeft
                 }
-                rightHandle -> max(
-                    leftHandle.right + seekHandle.width,
-                    min(width - child.width - paddingRight, left)
-                )
+                rightHandle -> {
+                    val newLeft = max(
+                        leftHandle.right + seekHandle.width,
+                        min(width - child.width - paddingRight, left)
+                    )
+
+                    if (leftHandle.left + dx <= paddingLeft && newLeft <= leftHandle.right + minLen)
+                        child.left
+                    else
+                        newLeft
+                }
                 seekHandle -> min(max(leftHandle.right, left), rightHandle.left - child.width)
                 else -> left
             }
@@ -294,6 +301,12 @@ class TrimView : FrameLayout {
                         ViewCompat.offsetLeftAndRight(seekHandle, dx)
                         dispatchPositionChanged(seekHandle)
                     }
+
+                    if (child.left <= leftHandle.right + minLen && leftHandle.left + dx > paddingLeft) {
+                        ViewCompat.offsetLeftAndRight(leftHandle, dx)
+                        dispatchPositionChanged(leftHandle)
+                    }
+
                     dispatchPositionChanged(rightHandle)
                 }
             }
