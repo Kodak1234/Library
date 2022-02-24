@@ -43,7 +43,6 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
         player.addListener(this)
         launcher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
             if (it != null) {
-                trim.setUri(it, getDuration(it))
                 uri = it
                 prepareToPlay()
             }
@@ -54,8 +53,7 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
         super.onViewCreated(view, savedInstanceState)
         trim = view.findViewById(R.id.trim)
         trim.addPositionListener(this)
-        if (uri == null)
-            launcher.launch(arrayOf("video/*"))
+
 
         val playerView = view.findViewById<PlayerView>(R.id.playerView)
         playButton = playerView.findViewById(R.id.playButton)
@@ -70,8 +68,10 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
         }
         playerView.player = player
 
-        playerView.controllerHideOnTouch = false
-        playerView.controllerShowTimeoutMs = 30000
+        if (uri == null)
+            launcher.launch(arrayOf("video/*"))
+        else
+            prepareToPlay()
 
     }
 
@@ -148,6 +148,8 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
     }
 
     private fun prepareToPlay() {
+        trim.setUri(uri!!, getDuration(uri!!))
+
         val clip = MediaItem.ClippingConfiguration.Builder()
         if (trim.maxDuration > 0)
             clip.setEndPositionMs(trim.maxDuration)
