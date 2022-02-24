@@ -6,6 +6,8 @@
         <attr name="rightHandleDrawable" format="reference" />
         <attr name="seekHandleDrawable" format="reference" />
         <attr name="rangeBackgroundColor" format="color" />
+        <attr name="minDuration" format="integer" />
+        <attr name="maxDuration" format="integer" />
         <attr name="strokeColor" />
         <attr name="strokeWidth" />
     </declare-styleable>

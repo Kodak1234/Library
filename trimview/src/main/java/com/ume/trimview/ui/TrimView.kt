@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.util.AttributeSet
+import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -40,10 +41,14 @@ class TrimView : FrameLayout {
     private val list = RecyclerView(context)
     private val dragHelper = ViewDragHelper.create(this, 1000f, DragCallback())
     private val bg: MaterialShapeDrawable
-    private val minDuration = 5000L
-    private val maxDuration = 10000L
-    private val maxWidth: Float
-        get() = 1f * (width - paddingRight) - paddingLeft
+    val minDuration: Long
+    var maxDuration: Long
+        private set
+    private var maxLen = 0
+    private var minLen = 0
+    private var availableSpace = -1
+    private val framesWindowSize: Int
+        get() = if (availableSpace == -1) width else availableSpace
 
     private val positionChangeListeners = mutableListOf<PositionChangeListener>(Listener())
 
@@ -91,6 +96,8 @@ class TrimView : FrameLayout {
         val strokeC = a.getColor(R.styleable.TrimView_strokeColor, Color.BLACK)
         val rangeBg = a.getColor(R.styleable.TrimView_rangeBackgroundColor, Color.BLACK)
         val strokeW = a.getDimension(R.styleable.TrimView_strokeWidth, 0f)
+        minDuration = a.getInteger(R.styleable.TrimView_minDuration, 0).toLong()
+        maxDuration = a.getInteger(R.styleable.TrimView_maxDuration, 0).toLong()
 
         ViewCompat.setBackground(leftRange, ColorDrawable(rangeBg)
             .apply { alpha = 200 })
@@ -114,12 +121,16 @@ class TrimView : FrameLayout {
         a.recycle()
     }
 
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.AT_MOST)
+            availableSpace = MeasureSpec.getSize(widthMeasureSpec)
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        frameSrc.onUpdate(width)
-
-
+        frameSrc.onUpdate(framesWindowSize)
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
@@ -130,6 +141,8 @@ class TrimView : FrameLayout {
             leftHandle.right + seekHandle.width,
             seekHandle.bottom
         )
+
+        updateWindowRange()
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
@@ -151,8 +164,7 @@ class TrimView : FrameLayout {
         this.duration = duration
         frameSrc.uri = uri
         frameSrc.duration = duration
-        if (ViewCompat.isLaidOut(this))
-            frameSrc.onUpdate(width)
+        frameSrc.onUpdate(framesWindowSize)
     }
 
     fun setLeftHandleDrawableRes(id: Int) {
@@ -178,6 +190,21 @@ class TrimView : FrameLayout {
         positionChangeListeners -= listener
     }
 
+    private fun updateWindowRange() {
+        if (ViewCompat.isLaidOut(this) && duration > 0) {
+            minLen = computePosition(minDuration) + seekHandle.width
+            maxLen = computePosition(maxDuration)
+            val dx = maxLen - rightHandle.left
+            if (maxLen >= minLen && dx < 0) {
+                ViewCompat.offsetLeftAndRight(rightHandle, dx)
+                dispatchPositionChanged(rightHandle)
+            } else {
+                maxLen = maxWidth().toInt()
+                maxDuration = duration
+            }
+        }
+    }
+
     private fun dispatchPositionChanged(vararg handles: View) {
         for (handle in handles) {
             val pos = computeDuration(handle)
@@ -193,33 +220,50 @@ class TrimView : FrameLayout {
 
     private fun dispatchHandleReleased(vararg handles: View) {
         for (handle in handles) {
+            val pos = computeDuration(handle)
             for (listener in positionChangeListeners) {
                 when (handle) {
-                    leftHandle -> listener.onLeftHandleReleased(handle)
-                    rightHandle -> listener.onRightHandleReleased(handle)
-                    seekHandle -> listener.onSeekHandleReleased(handle)
+                    leftHandle -> listener.onLeftHandleReleased(pos, handle)
+                    rightHandle -> listener.onRightHandleReleased(pos, handle)
+                    seekHandle -> listener.onSeekHandleReleased(pos, handle)
                 }
             }
         }
     }
 
-    private fun computeDuration(handle: View): Long {
+    private fun maxWidth() = 1f * list.width
 
-        return when (handle) {
-            rightHandle -> (handle.right - paddingRight) / maxWidth * duration
-            leftHandle -> (handle.left - paddingLeft) / maxWidth * duration
-            else -> {
-                when {
-                    seekHandle.right >= rightHandle.left -> computeDuration(rightHandle)
-                    seekHandle.left <= leftHandle.right -> computeDuration(leftHandle)
-                    else -> (handle.left - paddingLeft) / maxWidth * duration
-                }
-            }
-        }.toLong()
+    private fun computeDuration(handle: View): Long {
+        return ((handle.left / maxWidth()) * duration).toLong()
     }
 
-    private fun computePosition(duration: Long): Int =
-        ((maxWidth * duration) / this.duration).toInt()
+    private fun computePosition(d: Long): Int =
+        ((maxWidth() * d) / duration).toInt()
+
+
+    fun getSeekDuration() = computeDuration(seekHandle)
+
+    fun getStartDuration() = computeDuration(leftHandle)
+
+    fun getEndDuration() = computeDuration(rightHandle)
+
+    fun seekTo(positionMs: Long) {
+
+        val baseDuration = computeDuration(rightHandle) - computeDuration(leftHandle)
+        val baseLen = rightHandle.left - leftHandle.right
+
+        var dx = ((baseLen * positionMs) / baseDuration -
+                (seekHandle.left - leftHandle.right)).toInt()
+
+        val newLeft = seekHandle.left + dx
+        dx = when {
+            newLeft < leftHandle.right -> seekHandle.left - leftHandle.right
+            newLeft > rightHandle.left -> rightHandle.left - seekHandle.right
+            else -> dx
+        }
+
+        ViewCompat.offsetLeftAndRight(seekHandle, dx)
+    }
 
     private inner class Listener : PositionChangeListener {
         override fun onRightPositionChanged(duration: Long, rightHandle: View) {
@@ -244,6 +288,7 @@ class TrimView : FrameLayout {
     }
 
     private inner class DragCallback : ViewDragHelper.Callback() {
+
         override fun tryCaptureView(child: View, pointerId: Int): Boolean {
             return when (child) {
                 leftHandle, rightHandle, seekHandle/*, rangeView */ -> true
@@ -252,8 +297,6 @@ class TrimView : FrameLayout {
         }
 
         override fun clampViewPositionHorizontal(child: View, left: Int, dx: Int): Int {
-            val minLen = computePosition(minDuration) + seekHandle.width
-            val maxLen = computePosition(maxDuration)
             return when (child) {
                 leftHandle -> {
                     val newLeft = min(
@@ -261,11 +304,11 @@ class TrimView : FrameLayout {
                         rightHandle.left - child.width - seekHandle.width
                     )
 
-                    if (newLeft + child.width >= rightHandle.left - minLen
-                        && rightHandle.right + dx >= width - paddingRight
-                    ) {
+                    val outsideMinLen = newLeft + child.width >= rightHandle.left - minLen
+                            && rightHandle.right + dx >= width - paddingRight
+                    if (outsideMinLen)
                         child.left
-                    } else
+                    else
                         newLeft
                 }
                 rightHandle -> {
@@ -292,20 +335,23 @@ class TrimView : FrameLayout {
             dy: Int
         ) {
             super.onViewPositionChanged(child, left, top, dx, dy)
-            val minLen = computePosition(minDuration) + seekHandle.width
             when (child) {
                 seekHandle -> dispatchPositionChanged(seekHandle)
                 leftHandle -> {
-                    if (child.right >= rightHandle.left - minLen
-                        && rightHandle.right + dx < width - paddingRight
-                    ) {
+                    val outsideMinLen = child.right >= rightHandle.left - minLen
+                            && rightHandle.right + dx < width - paddingRight
+                    val outsideMaxLen = rightHandle.left - child.right >= maxLen && dx < 0
+                    if (outsideMinLen || outsideMaxLen) {
                         ViewCompat.offsetLeftAndRight(rightHandle, dx)
                         dispatchPositionChanged(rightHandle)
                     }
                     dispatchPositionChanged(leftHandle)
                 }
                 rightHandle -> {
-                    if (child.left <= leftHandle.right + minLen && leftHandle.left + dx > paddingLeft) {
+                    val outsideMinLen =
+                        child.left <= leftHandle.right + minLen && leftHandle.left + dx > paddingLeft
+                    val outsideMaxLen = child.left - leftHandle.right >= maxLen && dx > 0
+                    if (outsideMinLen || outsideMaxLen) {
                         ViewCompat.offsetLeftAndRight(leftHandle, dx)
                         dispatchPositionChanged(leftHandle)
                     }
@@ -339,9 +385,9 @@ class TrimView : FrameLayout {
         fun onLeftPositionChanged(duration: Long, leftHandle: View) {}
         fun onRightPositionChanged(duration: Long, rightHandle: View) {}
         fun onSeekPositionChanged(duration: Long, seekHandle: View) {}
-        fun onLeftHandleReleased(handle: View) {}
-        fun onRightHandleReleased(handle: View) {}
-        fun onSeekHandleReleased(handle: View) {}
+        fun onLeftHandleReleased(duration: Long, handle: View) {}
+        fun onRightHandleReleased(duration: Long, handle: View) {}
+        fun onSeekHandleReleased(duration: Long, handle: View) {}
     }
 
 }

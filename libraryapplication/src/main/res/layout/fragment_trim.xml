@@ -5,14 +5,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <com.google.android.exoplayer2.ui.PlayerView
+        android:id="@+id/playerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <com.ume.trimview.ui.TrimView
         android:id="@+id/trim"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:layout_margin="16dp"
-        android:padding="2dp">
-
-    </com.ume.trimview.ui.TrimView>
+        android:padding="2dp"
+        app:maxDuration="20000"
+        app:minDuration="5000"
+        tools:layout_width="match_parent" />
 
 </FrameLayout>
