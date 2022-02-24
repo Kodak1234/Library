@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.util.AttributeSet
-import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -31,11 +30,12 @@ import kotlin.math.min
 class TrimView : FrameLayout {
 
     private var duration: Long = 0L
-    private val leftHandle = AppCompatImageView(context)
-    private val rightHandle = AppCompatImageView(context)
-    private val seekHandle = AppCompatImageView(context)
+    val leftHandle = AppCompatImageView(context)
+    val rightHandle = AppCompatImageView(context)
+    val seekHandle = AppCompatImageView(context)
     private val leftRange = AppCompatImageView(context)
     private val rightRange = AppCompatImageView(context)
+    private val rangeView = AppCompatImageView(context)
     private val adapter = DelegateAdapter(context)
     private val frameSrc = FrameSource(adapter, resources.dp(50))
     private val list = RecyclerView(context)
@@ -51,6 +51,7 @@ class TrimView : FrameLayout {
         get() = if (availableSpace == -1) width else availableSpace
 
     private val positionChangeListeners = mutableListOf<PositionChangeListener>(Listener())
+    private var updateRange = true
 
     init {
 
@@ -67,11 +68,11 @@ class TrimView : FrameLayout {
         rightHandle.scaleType = ImageView.ScaleType.CENTER_CROP
         seekHandle.scaleType = ImageView.ScaleType.CENTER_CROP
 
-        list.setBackgroundColor(Color.BLUE)
         addView(list, LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
         addView(leftRange, LayoutParams(WRAP_CONTENT, MATCH_PARENT))
         addView(rightRange, LayoutParams(WRAP_CONTENT, MATCH_PARENT)
             .apply { gravity = Gravity.RIGHT })
+        addView(rangeView, LayoutParams(MATCH_PARENT, MATCH_PARENT))
         addView(leftHandle, LayoutParams(WRAP_CONTENT, MATCH_PARENT)
             .apply { gravity = Gravity.LEFT })
         addView(rightHandle, LayoutParams(WRAP_CONTENT, MATCH_PARENT)
@@ -135,6 +136,7 @@ class TrimView : FrameLayout {
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)
+        rangeView.layout(leftHandle.right, rangeView.top, rightHandle.left, rangeView.bottom)
         seekHandle.layout(
             leftHandle.right,
             seekHandle.top,
@@ -226,6 +228,10 @@ class TrimView : FrameLayout {
                     leftHandle -> listener.onLeftHandleReleased(pos, handle)
                     rightHandle -> listener.onRightHandleReleased(pos, handle)
                     seekHandle -> listener.onSeekHandleReleased(pos, handle)
+                    rangeView -> listener.onLeftHandleReleased(
+                        computeDuration(leftHandle),
+                        leftHandle
+                    )
                 }
             }
         }
@@ -274,6 +280,9 @@ class TrimView : FrameLayout {
                 ViewCompat.offsetLeftAndRight(seekHandle, dx)
                 dispatchPositionChanged(seekHandle)
             }
+
+            if (updateRange)
+                rangeView.right += rightHandle.left - rangeView.right
         }
 
         override fun onLeftPositionChanged(duration: Long, leftHandle: View) {
@@ -284,6 +293,9 @@ class TrimView : FrameLayout {
                 ViewCompat.offsetLeftAndRight(seekHandle, dx)
                 dispatchPositionChanged(seekHandle)
             }
+
+            if (updateRange)
+                rangeView.left += leftHandle.right - rangeView.left
         }
     }
 
@@ -291,7 +303,7 @@ class TrimView : FrameLayout {
 
         override fun tryCaptureView(child: View, pointerId: Int): Boolean {
             return when (child) {
-                leftHandle, rightHandle, seekHandle/*, rangeView */ -> true
+                leftHandle, rightHandle, seekHandle, rangeView -> true
                 else -> false
             }
         }
@@ -323,6 +335,12 @@ class TrimView : FrameLayout {
                         newLeft
                 }
                 seekHandle -> min(max(leftHandle.right, left), rightHandle.left - child.width)
+                rangeView -> {
+                    min(
+                        max(left, paddingLeft + leftHandle.width),
+                        width - paddingRight - child.width - rightHandle.width
+                    )
+                }
                 else -> left
             }
         }
@@ -335,7 +353,15 @@ class TrimView : FrameLayout {
             dy: Int
         ) {
             super.onViewPositionChanged(child, left, top, dx, dy)
+            updateRange = true
             when (child) {
+                rangeView -> {
+                    updateRange = false
+                    ViewCompat.offsetLeftAndRight(leftHandle, dx)
+                    ViewCompat.offsetLeftAndRight(seekHandle, dx)
+                    ViewCompat.offsetLeftAndRight(rightHandle, dx)
+                    dispatchPositionChanged(rightHandle, leftHandle, seekHandle)
+                }
                 seekHandle -> dispatchPositionChanged(seekHandle)
                 leftHandle -> {
                     val outsideMinLen = child.right >= rightHandle.left - minLen

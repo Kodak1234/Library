@@ -3,6 +3,8 @@ package com.ume.libraryapplication.screens
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.View
 import androidx.activity.result.ActivityResultLauncher
@@ -18,17 +20,25 @@ import com.ume.libraryapplication.R
 import com.ume.trimview.ui.TrimView
 
 class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeListener,
-    Player.Listener, PlayerControlView.ProgressUpdateListener {
+    Player.Listener {
 
     private lateinit var launcher: ActivityResultLauncher<Array<String>>
     private lateinit var trim: TrimView
     private lateinit var playButton: AppCompatImageView
-    private lateinit var controller: PlayerControlView
     private lateinit var player: Player
     private var uri: Uri? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private val updateProgress = object : Runnable {
+        override fun run() {
+            trim.seekTo(player.currentPosition)
+            if (player.isPlaying)
+                handler.post(this)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        uri = savedInstanceState?.getParcelable("URI")
         player = ExoPlayer.Builder(requireContext()).build()
         player.addListener(this)
         launcher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
@@ -49,7 +59,6 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
 
         val playerView = view.findViewById<PlayerView>(R.id.playerView)
         playButton = playerView.findViewById(R.id.playButton)
-        controller = playerView.findViewById(R.id.exo_controller)
         playButton.setOnClickListener {
             if (player.isPlaying)
                 player.pause()
@@ -64,7 +73,6 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
         playerView.controllerHideOnTouch = false
         playerView.controllerShowTimeoutMs = 30000
 
-        controller.setProgressUpdateListener(this)
     }
 
     override fun onPause() {
@@ -81,6 +89,8 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         super.onIsPlayingChanged(isPlaying)
         playButton.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
+        if (isPlaying)
+            handler.post(updateProgress)
 
     }
 
@@ -95,8 +105,7 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
             .setUri(uri)
             .setClippingConfiguration(clip)
             .build()
-        player.addMediaItem(media)
-        player.removeMediaItem(0)
+        setMedia(media)
     }
 
     override fun onRightHandleReleased(duration: Long, handle: View) {
@@ -110,8 +119,7 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
             .setUri(uri)
             .setClippingConfiguration(clip)
             .build()
-        player.addMediaItem(media)
-        player.removeMediaItem(0)
+        setMedia(media)
     }
 
     override fun onSeekHandleReleased(duration: Long, handle: View) {
@@ -119,9 +127,15 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
         player.seekTo(duration)
     }
 
-    override fun onProgressUpdate(position: Long, bufferedPosition: Long) {
-        trim.seekTo(position)
-        Log.i(TAG, "onProgressUpdate: $position player-position=${player.currentPosition}")
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putParcelable("URI", uri)
+    }
+
+    private fun setMedia(media: MediaItem) {
+        player.addMediaItem(media)
+        player.removeMediaItem(0)
+        player.seekToDefaultPosition()
     }
 
     private fun getDuration(uri: Uri): Long {
