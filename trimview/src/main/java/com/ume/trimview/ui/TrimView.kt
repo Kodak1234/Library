@@ -196,7 +196,7 @@ class TrimView : FrameLayout {
         if (ViewCompat.isLaidOut(this) && duration > 0) {
             minLen = computePosition(minDuration) + seekHandle.width
             maxLen = computePosition(maxDuration)
-            val dx = maxLen - rightHandle.left
+            val dx = maxLen - rightHandle.right
             if (maxLen >= minLen && dx < 0) {
                 ViewCompat.offsetLeftAndRight(rightHandle, dx)
                 dispatchPositionChanged(rightHandle)
@@ -209,12 +209,11 @@ class TrimView : FrameLayout {
 
     private fun dispatchPositionChanged(vararg handles: View) {
         for (handle in handles) {
-            val pos = computeDuration(handle)
             for (listener in positionChangeListeners) {
                 when (handle) {
-                    leftHandle -> listener.onLeftPositionChanged(pos, handle)
-                    rightHandle -> listener.onRightPositionChanged(pos, handle)
-                    seekHandle -> listener.onSeekPositionChanged(pos, handle)
+                    leftHandle -> listener.onLeftPositionChanged()
+                    rightHandle -> listener.onRightPositionChanged()
+                    seekHandle -> listener.onSeekPositionChanged()
                 }
             }
         }
@@ -222,16 +221,12 @@ class TrimView : FrameLayout {
 
     private fun dispatchHandleReleased(vararg handles: View) {
         for (handle in handles) {
-            val pos = computeDuration(handle)
             for (listener in positionChangeListeners) {
                 when (handle) {
-                    leftHandle -> listener.onLeftHandleReleased(pos, handle)
-                    rightHandle -> listener.onRightHandleReleased(pos, handle)
-                    seekHandle -> listener.onSeekHandleReleased(pos, handle)
-                    rangeView -> listener.onLeftHandleReleased(
-                        computeDuration(leftHandle),
-                        leftHandle
-                    )
+                    leftHandle -> listener.onLeftHandleReleased()
+                    rightHandle -> listener.onRightHandleReleased()
+                    seekHandle -> listener.onSeekHandleReleased()
+                    rangeView -> listener.onLeftHandleReleased()
                 }
             }
         }
@@ -239,41 +234,41 @@ class TrimView : FrameLayout {
 
     private fun maxWidth() = 1f * list.width
 
-    private fun computeDuration(handle: View): Long {
-        return ((handle.left / maxWidth()) * duration).toLong()
+    private fun computeDuration(pos: Int): Long {
+        return ((pos / maxWidth()) * duration).toLong()
     }
 
     private fun computePosition(d: Long): Int =
         ((maxWidth() * d) / duration).toInt()
 
 
-    fun getSeekDuration() = computeDuration(seekHandle)
+    fun getSeekDuration() = computeDuration(seekHandle.left)
 
-    fun getStartDuration() = computeDuration(leftHandle)
+    fun getStartDuration() = computeDuration(leftHandle.left - paddingLeft)
 
-    fun getEndDuration() = computeDuration(rightHandle)
+    fun getEndDuration() = computeDuration(rightHandle.right)
 
     fun seekTo(positionMs: Long) {
+        if (dragHelper.capturedView == null) {
+            val baseDuration = getEndDuration() - getStartDuration()
+            val baseLen = rightHandle.left - leftHandle.right - seekHandle.width
 
-        val baseDuration = computeDuration(rightHandle) - computeDuration(leftHandle)
-        val baseLen = rightHandle.left - leftHandle.right
+            var dx = ((baseLen * positionMs) / baseDuration - (seekHandle.left - leftHandle.right)).toInt()
 
-        var dx = ((baseLen * positionMs) / baseDuration -
-                (seekHandle.left - leftHandle.right)).toInt()
+            val newLeft = seekHandle.left + dx
+            dx = when {
+                newLeft < leftHandle.right -> seekHandle.left - leftHandle.right
+                newLeft > rightHandle.left -> rightHandle.left - seekHandle.right
+                else -> dx
+            }
 
-        val newLeft = seekHandle.left + dx
-        dx = when {
-            newLeft < leftHandle.right -> seekHandle.left - leftHandle.right
-            newLeft > rightHandle.left -> rightHandle.left - seekHandle.right
-            else -> dx
+            ViewCompat.offsetLeftAndRight(seekHandle, dx)
         }
-
-        ViewCompat.offsetLeftAndRight(seekHandle, dx)
     }
 
     private inner class Listener : PositionChangeListener {
-        override fun onRightPositionChanged(duration: Long, rightHandle: View) {
-            super.onRightPositionChanged(duration, rightHandle)
+        override fun onRightPositionChanged() {
+            super.onRightPositionChanged()
             rightRange.left += (rightHandle.right - rightRange.left)
             val dx = rightHandle.left - seekHandle.right
             if (dx < 0) {
@@ -285,8 +280,8 @@ class TrimView : FrameLayout {
                 rangeView.right += rightHandle.left - rangeView.right
         }
 
-        override fun onLeftPositionChanged(duration: Long, leftHandle: View) {
-            super.onLeftPositionChanged(duration, leftHandle)
+        override fun onLeftPositionChanged() {
+            super.onLeftPositionChanged()
             leftRange.right += (leftHandle.left - leftRange.right)
             val dx = leftHandle.right - seekHandle.left
             if (dx > 0) {
@@ -408,12 +403,12 @@ class TrimView : FrameLayout {
     }
 
     interface PositionChangeListener {
-        fun onLeftPositionChanged(duration: Long, leftHandle: View) {}
-        fun onRightPositionChanged(duration: Long, rightHandle: View) {}
-        fun onSeekPositionChanged(duration: Long, seekHandle: View) {}
-        fun onLeftHandleReleased(duration: Long, handle: View) {}
-        fun onRightHandleReleased(duration: Long, handle: View) {}
-        fun onSeekHandleReleased(duration: Long, handle: View) {}
+        fun onLeftPositionChanged() {}
+        fun onRightPositionChanged() {}
+        fun onSeekPositionChanged() {}
+        fun onLeftHandleReleased() {}
+        fun onRightHandleReleased() {}
+        fun onSeekHandleReleased() {}
     }
 
 }
