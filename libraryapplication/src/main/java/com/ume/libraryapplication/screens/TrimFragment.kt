@@ -70,8 +70,9 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
 
         if (uri == null)
             launcher.launch(arrayOf("video/*"))
-        else
-            prepareToPlay()
+        else {
+            trim.post { prepareToPlay() }
+        }
 
     }
 
