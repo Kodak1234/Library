@@ -6,6 +6,8 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
+import android.os.Parcel
+import android.os.Parcelable
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.MotionEvent
@@ -16,6 +18,7 @@ import android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
 import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.view.ViewCompat
+import androidx.core.view.doOnLayout
 import androidx.customview.widget.ViewDragHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -23,13 +26,16 @@ import com.google.android.material.color.MaterialColors
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.ume.adapter.DelegateAdapter
 import com.ume.trimview.R
+import com.ume.util.BitFlag
 import com.ume.util.dp
 import kotlin.math.max
 import kotlin.math.min
 
 class TrimView : FrameLayout {
 
-    private var duration: Long = 0L
+    val minDuration: Long
+    var maxDuration: Long
+        private set
     val leftHandle = AppCompatImageView(context)
     val rightHandle = AppCompatImageView(context)
     val seekHandle = AppCompatImageView(context)
@@ -41,9 +47,6 @@ class TrimView : FrameLayout {
     private val list = RecyclerView(context)
     private val dragHelper = ViewDragHelper.create(this, 1000f, DragCallback())
     private val bg: MaterialShapeDrawable
-    val minDuration: Long
-    var maxDuration: Long
-        private set
     private var maxLen = 0
     private var minLen = 0
     private var availableSpace = -1
@@ -51,7 +54,8 @@ class TrimView : FrameLayout {
         get() = if (availableSpace == -1) width else availableSpace
 
     private val positionChangeListeners = mutableListOf<PositionChangeListener>(Listener())
-    private var updateRange = true
+    private var savedState: SavedState? = null
+    private val flag = BitFlag(0)
 
     init {
 
@@ -128,12 +132,6 @@ class TrimView : FrameLayout {
             availableSpace = MeasureSpec.getSize(widthMeasureSpec)
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        frameSrc.onUpdate(framesWindowSize)
-    }
-
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)
         rangeView.layout(leftHandle.right, rangeView.top, rightHandle.left, rangeView.bottom)
@@ -145,6 +143,27 @@ class TrimView : FrameLayout {
         )
 
         updateWindowRange()
+
+        savedState?.let { state ->
+            val newRight = computePosition(state.endDuration)
+            rightHandle.layout(
+                newRight - rightHandle.width,
+                rightHandle.top,
+                newRight,
+                rightHandle.bottom
+            )
+
+            val newLeft = computePosition(state.startDuration) + paddingLeft
+            leftHandle.layout(
+                newLeft,
+                leftHandle.top,
+                newLeft + leftHandle.width,
+                leftHandle.bottom
+            )
+
+            dispatchPositionChanged(rightHandle, leftHandle)
+        }
+
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
@@ -162,11 +181,28 @@ class TrimView : FrameLayout {
         dragHelper.continueSettling(true)
     }
 
+    override fun onRestoreInstanceState(state: Parcelable?) {
+        if (state is SavedState) {
+            super.onRestoreInstanceState(state.superState)
+            savedState = state
+            state.uri?.let { setUri(it, state.duration) }
+        } else
+            super.onRestoreInstanceState(state)
+    }
+
+    override fun onSaveInstanceState(): Parcelable {
+        return SavedState(super.onSaveInstanceState()).apply {
+            this.duration = frameSrc.duration
+            startDuration = getStartDuration()
+            endDuration = getEndDuration()
+            uri = frameSrc.uri
+        }
+    }
+
     fun setUri(uri: Uri, duration: Long) {
-        this.duration = duration
         frameSrc.uri = uri
         frameSrc.duration = duration
-        frameSrc.onUpdate(framesWindowSize)
+        doOnLayout { frameSrc.onUpdate(framesWindowSize) }
     }
 
     fun setLeftHandleDrawableRes(id: Int) {
@@ -193,7 +229,7 @@ class TrimView : FrameLayout {
     }
 
     private fun updateWindowRange() {
-        if (ViewCompat.isLaidOut(this) && duration > 0) {
+        if (ViewCompat.isLaidOut(this) && frameSrc.duration > 0) {
             minLen = computePosition(minDuration) + seekHandle.width
             maxLen = computePosition(maxDuration)
             val dx = maxLen - rightHandle.right
@@ -201,8 +237,8 @@ class TrimView : FrameLayout {
                 ViewCompat.offsetLeftAndRight(rightHandle, dx)
                 dispatchPositionChanged(rightHandle)
             } else {
-                maxLen = maxWidth().toInt()
-                maxDuration = duration
+                maxDuration = frameSrc.duration
+                maxLen = computePosition(maxDuration)
             }
         }
     }
@@ -235,11 +271,11 @@ class TrimView : FrameLayout {
     private fun maxWidth() = 1f * list.width
 
     private fun computeDuration(pos: Int): Long {
-        return ((pos / maxWidth()) * duration).toLong()
+        return ((pos / maxWidth()) * frameSrc.duration).toLong()
     }
 
     private fun computePosition(d: Long): Int =
-        ((maxWidth() * d) / duration).toInt()
+        ((maxWidth() * d) / frameSrc.duration).toInt()
 
 
     fun getSeekDuration() = computeDuration(seekHandle.left)
@@ -253,7 +289,8 @@ class TrimView : FrameLayout {
             val baseDuration = getEndDuration() - getStartDuration()
             val baseLen = rightHandle.left - leftHandle.right - seekHandle.width
 
-            var dx = ((baseLen * positionMs) / baseDuration - (seekHandle.left - leftHandle.right)).toInt()
+            var dx =
+                ((baseLen * positionMs) / baseDuration - (seekHandle.left - leftHandle.right)).toInt()
 
             val newLeft = seekHandle.left + dx
             dx = when {
@@ -276,7 +313,7 @@ class TrimView : FrameLayout {
                 dispatchPositionChanged(seekHandle)
             }
 
-            if (updateRange)
+            if (flag.has(UPDATE_RANGE))
                 rangeView.right += rightHandle.left - rangeView.right
         }
 
@@ -289,7 +326,7 @@ class TrimView : FrameLayout {
                 dispatchPositionChanged(seekHandle)
             }
 
-            if (updateRange)
+            if (flag.has(UPDATE_RANGE))
                 rangeView.left += leftHandle.right - rangeView.left
         }
     }
@@ -348,10 +385,10 @@ class TrimView : FrameLayout {
             dy: Int
         ) {
             super.onViewPositionChanged(child, left, top, dx, dy)
-            updateRange = true
+            flag.add(UPDATE_RANGE)
             when (child) {
                 rangeView -> {
-                    updateRange = false
+                    flag.remove(UPDATE_RANGE)
                     ViewCompat.offsetLeftAndRight(leftHandle, dx)
                     ViewCompat.offsetLeftAndRight(seekHandle, dx)
                     ViewCompat.offsetLeftAndRight(rightHandle, dx)
@@ -402,6 +439,32 @@ class TrimView : FrameLayout {
         }
     }
 
+    private class SavedState : BaseSavedState {
+        var startDuration = 0L
+        var endDuration = 0L
+        var uri: Uri? = null
+        var duration = 0L
+
+        @SuppressLint("ParcelClassLoader")
+        constructor(parcel: Parcel) : super(parcel) {
+            startDuration = parcel.readLong()
+            endDuration = parcel.readLong()
+            uri = parcel.readParcelable(null)
+        }
+
+        constructor(parent: Parcelable?) : super(parent)
+
+
+        override fun writeToParcel(out: Parcel, flags: Int) {
+            super.writeToParcel(out, flags)
+            out.writeLong(startDuration)
+            out.writeLong(endDuration)
+            out.writeParcelable(uri, flags)
+            out.writeLong(duration)
+        }
+
+    }
+
     interface PositionChangeListener {
         fun onLeftPositionChanged() {}
         fun onRightPositionChanged() {}
@@ -409,6 +472,10 @@ class TrimView : FrameLayout {
         fun onLeftHandleReleased() {}
         fun onRightHandleReleased() {}
         fun onSeekHandleReleased() {}
+    }
+
+    companion object {
+        private const val UPDATE_RANGE = 1
     }
 
 }

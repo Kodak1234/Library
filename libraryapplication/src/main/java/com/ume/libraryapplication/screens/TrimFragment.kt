@@ -43,6 +43,8 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
         launcher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
             if (it != null) {
                 uri = it
+                val duration = getDuration(uri!!)
+                trim.setUri(uri!!, duration)
                 prepareToPlay()
             }
         }
@@ -56,13 +58,17 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
 
         val playerView = view.findViewById<PlayerView>(R.id.playerView)
         playButton = playerView.findViewById(R.id.playButton)
+        var clip = savedInstanceState != null
         playButton.setOnClickListener {
             if (player.isPlaying)
                 player.pause()
             else {
                 if (player.playbackState == Player.STATE_ENDED)
                     player.seekToDefaultPosition()
-                player.playWhenReady = true
+                if (clip)
+                    clipVideo(trim.getStartDuration(), trim.getEndDuration())
+                player.play()
+                clip = false
             }
         }
         playerView.player = player
@@ -70,7 +76,7 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
         if (uri == null)
             launcher.launch(arrayOf("video/*"))
         else {
-            trim.post { prepareToPlay() }
+            prepareToPlay()
         }
 
     }
@@ -146,10 +152,6 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
     }
 
     private fun prepareToPlay() {
-        val duration = getDuration(uri!!)
-        Log.i(TAG, "prepareToPlay: duration = $duration")
-        trim.setUri(uri!!, duration)
-
         val clip = MediaItem.ClippingConfiguration.Builder()
         if (trim.maxDuration > 0)
             clip.setEndPositionMs(trim.maxDuration)
