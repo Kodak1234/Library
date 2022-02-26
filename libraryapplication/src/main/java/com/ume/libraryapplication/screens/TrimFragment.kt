@@ -100,6 +100,21 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.HandleCallback,
 
     }
 
+    override fun onPlaybackStateChanged(playbackState: Int) {
+        super.onPlaybackStateChanged(playbackState)
+        if (playbackState == Player.STATE_READY) {
+            trim.getStartDuration()
+            Log.d(
+                TAG, """onActiveHandleReleased() called with: 
+            |startDuration = ${trim.getStartDuration()} 
+            |seekDuration = ${trim.getSeekDuration()} 
+            |endDuration = ${trim.getEndDuration()} 
+            |Duration = ${player.duration} 
+        """.trimMargin()
+            )
+        }
+    }
+
 
     override fun onActiveHandleReleased(handle: View) {
         super.onActiveHandleReleased(handle)
@@ -107,8 +122,6 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.HandleCallback,
             trim.seekHandle -> player.seekTo(trim.getSeekDuration())
             else -> clipVideo(trim.getStartDuration(), trim.getEndDuration())
         }
-
-        Log.d(TAG, "onActiveHandleReleased() called with: duration = ${trim.getStartDuration()}")
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

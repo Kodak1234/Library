@@ -28,8 +28,10 @@ import com.ume.adapter.DelegateAdapter
 import com.ume.trimview.R
 import com.ume.trimview.ui.TrimView.Reason.*
 import com.ume.util.dp
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.round
 
 class TrimView : FrameLayout {
 
@@ -147,7 +149,7 @@ class TrimView : FrameLayout {
         updateWindowRange()
 
         savedState?.let { state ->
-            val newRight = computePosition(state.endDuration)
+            val newRight = computePosition(state.endDuration) + paddingLeft
             rightHandle.layout(
                 newRight - rightHandle.width,
                 rightHandle.top,
@@ -235,7 +237,7 @@ class TrimView : FrameLayout {
         if (ViewCompat.isLaidOut(this) && frameSrc.duration > 0) {
             minLen = computePosition(minDuration) + seekHandle.width
             maxLen = computePosition(maxDuration)
-            val dx = maxLen - rightHandle.right
+            val dx = (maxLen + paddingLeft) - rightHandle.right
             if (maxLen >= minLen && dx < 0) {
                 ViewCompat.offsetLeftAndRight(rightHandle, dx)
                 dispatchPositionChanged(dx, rightHandle, AUTO)
@@ -254,17 +256,22 @@ class TrimView : FrameLayout {
 
     private fun maxWidth() = 1f * list.width
 
-    private fun computeDuration(pos: Int): Long {
-        return ((pos / maxWidth()) * frameSrc.duration).toLong()
+    private fun computeDuration(pos: Int, round: (Float) -> Long = { it.toLong() }): Long {
+        return round(((pos / maxWidth()) * frameSrc.duration))
     }
 
+    /**
+     * Maps time to x position. Rounds up result to minimize for accuracy lost due to conversion from float to long
+     * @param time should be in range 0 to FrameSource.duration
+     * @see FrameSource.duration
+     */
     private fun computePosition(d: Long): Int =
-        ((maxWidth() * d) / frameSrc.duration).toInt()
+        ceil((maxWidth() * d) / frameSrc.duration).toInt()
 
 
-    fun getSeekDuration() = computeDuration(seekHandle.left)
+    fun getSeekDuration(): Long = computeDuration(seekHandle.left - leftHandle.width - paddingLeft)
 
-    fun getStartDuration() = computeDuration(leftHandle.left - paddingLeft)
+    fun getStartDuration(): Long = computeDuration(leftHandle.left - paddingLeft)
 
     fun getEndDuration() = computeDuration(rightHandle.right)
 
@@ -338,9 +345,7 @@ class TrimView : FrameLayout {
                         rightHandle.left - child.width - seekHandle.width
                     )
 
-                    val outsideMinLen = newLeft + child.width >= rightHandle.left - minLen
-                            && rightHandle.right + dx >= width - paddingRight
-                    if (outsideMinLen)
+                    if (dx > 0 && (getEndDuration() - getStartDuration() >= minDuration))
                         child.left
                     else
                         newLeft
@@ -351,7 +356,8 @@ class TrimView : FrameLayout {
                         min(width - child.width - paddingRight, left)
                     )
 
-                    if (leftHandle.left + dx <= paddingLeft && newLeft <= leftHandle.right + minLen)
+                    val d = computeDuration(newLeft + child.width) - getStartDuration()
+                    if (leftHandle.left + dx <= paddingLeft && d <= minDuration)
                         child.left
                     else
                         newLeft
