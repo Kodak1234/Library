@@ -35,7 +35,8 @@ import kotlin.math.round
 
 class TrimView : FrameLayout {
 
-    val minDuration: Long
+    var minDuration: Long
+        private set
     var maxDuration: Long
         private set
     val activeHandle: View?
@@ -51,8 +52,6 @@ class TrimView : FrameLayout {
     private val list = RecyclerView(context)
     private val dragHelper = ViewDragHelper.create(this, 1000f, DragCallback())
     private val bg: MaterialShapeDrawable
-    private var maxLen = 0
-    private var minLen = 0
     private var availableSpace = -1
     private val framesWindowSize: Int
         get() = if (availableSpace == -1) width else availableSpace
@@ -235,15 +234,13 @@ class TrimView : FrameLayout {
 
     private fun updateWindowRange() {
         if (ViewCompat.isLaidOut(this) && frameSrc.duration > 0) {
-            minLen = computePosition(minDuration) + seekHandle.width
-            maxLen = computePosition(maxDuration)
-            val dx = (maxLen + paddingLeft) - rightHandle.right
-            if (maxLen >= minLen && dx < 0) {
+            minDuration = max(minDuration, computeDuration(leftHandle.width + seekHandle.width))
+            val dx = (computePosition(maxDuration) + paddingLeft) - rightHandle.right
+            if (dx < 0 && rightHandle.left + dx >= computePosition(minDuration)) {
                 ViewCompat.offsetLeftAndRight(rightHandle, dx)
                 dispatchPositionChanged(dx, rightHandle, AUTO)
             } else {
                 maxDuration = frameSrc.duration
-                maxLen = computePosition(maxDuration)
             }
         }
     }
@@ -256,8 +253,9 @@ class TrimView : FrameLayout {
 
     private fun maxWidth() = 1f * list.width
 
-    private fun computeDuration(pos: Int): Long {
-        return ((pos / maxWidth()) * frameSrc.duration).toLong()
+    private fun computeDuration(pos: Int, withPadding: Boolean = true): Long {
+        val p = if (withPadding) pos - paddingLeft else pos
+        return ((p / maxWidth()) * frameSrc.duration).toLong()
     }
 
     /**
@@ -269,16 +267,16 @@ class TrimView : FrameLayout {
         ceil((maxWidth() * d) / frameSrc.duration).toInt()
 
 
-    fun getSeekDuration(): Long = computeDuration(seekHandle.left - leftHandle.width - paddingLeft)
+    fun getSeekDuration(): Long = computeDuration(seekHandle.left - leftHandle.width)
 
-    fun getStartDuration(): Long = computeDuration(leftHandle.left - paddingLeft)
+    fun getStartDuration(): Long = computeDuration(leftHandle.left)
 
     fun getEndDuration(): Long = computeDuration(rightHandle.right)
 
     fun seekTo(positionMs: Long) {
         if (dragHelper.capturedView == null) {
             val baseDuration = getEndDuration() - getStartDuration()
-            val baseLen = (rightHandle.left - leftHandle.right - seekHandle.width) + paddingLeft
+            val baseLen = rightHandle.left - leftHandle.right - seekHandle.width
 
             var dx =
                 ((baseLen * positionMs) / baseDuration - (seekHandle.left - leftHandle.right)).toInt()
@@ -345,7 +343,8 @@ class TrimView : FrameLayout {
                         rightHandle.left - child.width - seekHandle.width
                     )
 
-                    if (dx > 0 && (getEndDuration() - getStartDuration() >= minDuration))
+                    val d = computeDuration(newLeft)
+                    if (rightHandle.right + dx >= width - paddingRight && (getEndDuration() - d <= minDuration))
                         child.left
                     else
                         newLeft
@@ -392,20 +391,20 @@ class TrimView : FrameLayout {
                 }
                 seekHandle -> dispatchPositionChanged(dx, seekHandle, USER)
                 leftHandle -> {
-                    val outsideMinLen = child.right >= rightHandle.left - minLen
-                            && rightHandle.right + dx < width - paddingRight
-                    val outsideMaxLen = rightHandle.left - child.right >= maxLen && dx < 0
-                    if (outsideMinLen || outsideMaxLen) {
+                    val d = getEndDuration() - getStartDuration()
+                    var move = d <= minDuration && rightHandle.right + dx < width - paddingRight
+                    move = move || d >= maxDuration && dx < 0
+                    if (move) {
                         ViewCompat.offsetLeftAndRight(rightHandle, dx)
                         dispatchPositionChanged(dx, rightHandle, AUTO)
                     }
                     dispatchPositionChanged(dx, leftHandle, USER)
                 }
                 rightHandle -> {
-                    val outsideMinLen =
-                        child.left <= leftHandle.right + minLen && leftHandle.left + dx > paddingLeft
-                    val outsideMaxLen = child.left - leftHandle.right >= maxLen && dx > 0
-                    if (outsideMinLen || outsideMaxLen) {
+                    val d = getEndDuration() - getStartDuration()
+                    var move = d <= minDuration && leftHandle.left + dx > paddingLeft
+                    move = move || d >= maxDuration && dx > 0
+                    if (move) {
                         ViewCompat.offsetLeftAndRight(leftHandle, dx)
                         dispatchPositionChanged(dx, leftHandle, AUTO)
                     }
