@@ -256,13 +256,13 @@ class TrimView : FrameLayout {
 
     private fun maxWidth() = 1f * list.width
 
-    private fun computeDuration(pos: Int, round: (Float) -> Long = { it.toLong() }): Long {
-        return round(((pos / maxWidth()) * frameSrc.duration))
+    private fun computeDuration(pos: Int): Long {
+        return ((pos / maxWidth()) * frameSrc.duration).toLong()
     }
 
     /**
      * Maps time to x position. Rounds up result to minimize for accuracy lost due to conversion from float to long
-     * @param time should be in range 0 to FrameSource.duration
+     * @param d time in milliseconds. Should be in range 0 to FrameSource.duration
      * @see FrameSource.duration
      */
     private fun computePosition(d: Long): Int =
@@ -273,12 +273,12 @@ class TrimView : FrameLayout {
 
     fun getStartDuration(): Long = computeDuration(leftHandle.left - paddingLeft)
 
-    fun getEndDuration() = computeDuration(rightHandle.right)
+    fun getEndDuration(): Long = computeDuration(rightHandle.right)
 
     fun seekTo(positionMs: Long) {
         if (dragHelper.capturedView == null) {
             val baseDuration = getEndDuration() - getStartDuration()
-            val baseLen = rightHandle.left - leftHandle.right - seekHandle.width
+            val baseLen = (rightHandle.left - leftHandle.right - seekHandle.width) + paddingLeft
 
             var dx =
                 ((baseLen * positionMs) / baseDuration - (seekHandle.left - leftHandle.right)).toInt()
