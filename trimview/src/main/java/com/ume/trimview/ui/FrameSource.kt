@@ -27,8 +27,8 @@ class FrameSource(
     override fun type(index: Int): Int = 0
 
     fun onUpdate(width: Int) {
-        val frameCount = width / itemWidth
-        if (duration > 0 && frameCount > 0) {
+        val frameCount = width / itemWidth + 1
+        if (duration > 0) {
             val timeStep = duration / frameCount
             val frames = mutableListOf<Frame>()
             for (i in 0 until duration step timeStep) {
