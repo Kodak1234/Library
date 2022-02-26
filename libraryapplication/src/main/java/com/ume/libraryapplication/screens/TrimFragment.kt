@@ -18,7 +18,7 @@ import com.google.android.exoplayer2.ui.PlayerView
 import com.ume.libraryapplication.R
 import com.ume.trimview.ui.TrimView
 
-class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeListener,
+class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.HandleCallback,
     Player.Listener {
 
     private lateinit var launcher: ActivityResultLauncher<Array<String>>
@@ -100,22 +100,15 @@ class TrimFragment : Fragment(R.layout.fragment_trim), TrimView.PositionChangeLi
 
     }
 
-    override fun onLeftHandleReleased() {
-        super.onLeftHandleReleased()
-        clipVideo(trim.getStartDuration(), trim.getEndDuration())
 
-        Log.d(TAG, "onLeftHandleReleased() called with: duration = ${trim.getStartDuration()}")
-    }
+    override fun onActiveHandleReleased(handle: View) {
+        super.onActiveHandleReleased(handle)
+        when (handle) {
+            trim.seekHandle -> player.seekTo(trim.getSeekDuration())
+            else -> clipVideo(trim.getStartDuration(), trim.getEndDuration())
+        }
 
-    override fun onRightHandleReleased() {
-        super.onRightHandleReleased()
-        clipVideo(trim.getStartDuration(), trim.getEndDuration())
-        Log.d(TAG, "onRightHandleReleased() called with: duration = ${trim.getEndDuration()}")
-    }
-
-    override fun onSeekHandleReleased() {
-        super.onSeekHandleReleased()
-        player.seekTo(trim.getSeekDuration())
+        Log.d(TAG, "onActiveHandleReleased() called with: duration = ${trim.getStartDuration()}")
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

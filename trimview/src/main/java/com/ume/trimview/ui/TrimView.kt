@@ -26,7 +26,7 @@ import com.google.android.material.color.MaterialColors
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.ume.adapter.DelegateAdapter
 import com.ume.trimview.R
-import com.ume.util.BitFlag
+import com.ume.trimview.ui.TrimView.Reason.*
 import com.ume.util.dp
 import kotlin.math.max
 import kotlin.math.min
@@ -36,6 +36,8 @@ class TrimView : FrameLayout {
     val minDuration: Long
     var maxDuration: Long
         private set
+    val activeHandle: View?
+        get() = dragHelper.capturedView
     val leftHandle = AppCompatImageView(context)
     val rightHandle = AppCompatImageView(context)
     val seekHandle = AppCompatImageView(context)
@@ -53,12 +55,12 @@ class TrimView : FrameLayout {
     private val framesWindowSize: Int
         get() = if (availableSpace == -1) width else availableSpace
 
-    private val positionChangeListeners = mutableListOf<PositionChangeListener>(Listener())
+    private val positionChangeListeners = mutableListOf<HandleCallback>(Listener())
     private var savedState: SavedState? = null
-    private val flag = BitFlag(0)
 
     init {
 
+        rangeView.setBackgroundColor(Color.parseColor("#a0ff0000"))
         adapter.source = frameSrc
         adapter.addDelegate(FrameDelegate())
         list.layoutManager = object : LinearLayoutManager(context, HORIZONTAL, false) {
@@ -161,7 +163,8 @@ class TrimView : FrameLayout {
                 leftHandle.bottom
             )
 
-            dispatchPositionChanged(rightHandle, leftHandle)
+            dispatchPositionChanged(0, rightHandle, AUTO)
+            dispatchPositionChanged(0, leftHandle, AUTO)
         }
 
     }
@@ -220,11 +223,11 @@ class TrimView : FrameLayout {
             seekHandle.setImageResource(id)
     }
 
-    fun addPositionListener(listener: PositionChangeListener) {
+    fun addPositionListener(listener: HandleCallback) {
         positionChangeListeners += listener
     }
 
-    fun removePositionListener(listener: PositionChangeListener) {
+    fun removePositionListener(listener: HandleCallback) {
         positionChangeListeners -= listener
     }
 
@@ -235,7 +238,7 @@ class TrimView : FrameLayout {
             val dx = maxLen - rightHandle.right
             if (maxLen >= minLen && dx < 0) {
                 ViewCompat.offsetLeftAndRight(rightHandle, dx)
-                dispatchPositionChanged(rightHandle)
+                dispatchPositionChanged(dx, rightHandle, AUTO)
             } else {
                 maxDuration = frameSrc.duration
                 maxLen = computePosition(maxDuration)
@@ -243,28 +246,9 @@ class TrimView : FrameLayout {
         }
     }
 
-    private fun dispatchPositionChanged(vararg handles: View) {
-        for (handle in handles) {
-            for (listener in positionChangeListeners) {
-                when (handle) {
-                    leftHandle -> listener.onLeftPositionChanged()
-                    rightHandle -> listener.onRightPositionChanged()
-                    seekHandle -> listener.onSeekPositionChanged()
-                }
-            }
-        }
-    }
-
-    private fun dispatchHandleReleased(vararg handles: View) {
-        for (handle in handles) {
-            for (listener in positionChangeListeners) {
-                when (handle) {
-                    leftHandle -> listener.onLeftHandleReleased()
-                    rightHandle -> listener.onRightHandleReleased()
-                    seekHandle -> listener.onSeekHandleReleased()
-                    rangeView -> listener.onLeftHandleReleased()
-                }
-            }
+    private fun dispatchPositionChanged(dx: Int, handle: View, reason: Reason) {
+        for (listener in positionChangeListeners) {
+            listener.onHandlePositionChanged(handle, dx, reason)
         }
     }
 
@@ -300,34 +284,40 @@ class TrimView : FrameLayout {
             }
 
             ViewCompat.offsetLeftAndRight(seekHandle, dx)
+            dispatchPositionChanged(dx, seekHandle, SEEK)
         }
     }
 
-    private inner class Listener : PositionChangeListener {
-        override fun onRightPositionChanged() {
-            super.onRightPositionChanged()
-            rightRange.left += (rightHandle.right - rightRange.left)
-            val dx = rightHandle.left - seekHandle.right
-            if (dx < 0) {
-                ViewCompat.offsetLeftAndRight(seekHandle, dx)
-                dispatchPositionChanged(seekHandle)
+    private inner class Listener : HandleCallback {
+
+        override fun onHandlePositionChanged(handle: View, dx: Int, reason: Reason) {
+            super.onHandlePositionChanged(handle, dx, reason)
+            when (handle) {
+                leftHandle -> {
+                    leftRange.right += (leftHandle.left - leftRange.right)
+                    val delta = leftHandle.right - seekHandle.left
+                    if (delta > 0) {
+                        ViewCompat.offsetLeftAndRight(seekHandle, delta)
+                        dispatchPositionChanged(delta, seekHandle, AUTO)
+                    }
+
+                    if (activeHandle != rangeView)
+                        rangeView.left += leftHandle.right - rangeView.left
+                }
+                rightHandle -> {
+                    rightRange.left += (rightHandle.right - rightRange.left)
+                    val delta = rightHandle.left - seekHandle.right
+                    if (delta < 0) {
+                        ViewCompat.offsetLeftAndRight(seekHandle, delta)
+                        dispatchPositionChanged(delta, seekHandle, AUTO)
+                    }
+
+                    if (activeHandle != rangeView)
+                        rangeView.right += rightHandle.left - rangeView.right
+                }
             }
 
-            if (flag.has(UPDATE_RANGE))
-                rangeView.right += rightHandle.left - rangeView.right
-        }
 
-        override fun onLeftPositionChanged() {
-            super.onLeftPositionChanged()
-            leftRange.right += (leftHandle.left - leftRange.right)
-            val dx = leftHandle.right - seekHandle.left
-            if (dx > 0) {
-                ViewCompat.offsetLeftAndRight(seekHandle, dx)
-                dispatchPositionChanged(seekHandle)
-            }
-
-            if (flag.has(UPDATE_RANGE))
-                rangeView.left += leftHandle.right - rangeView.left
         }
     }
 
@@ -385,25 +375,25 @@ class TrimView : FrameLayout {
             dy: Int
         ) {
             super.onViewPositionChanged(child, left, top, dx, dy)
-            flag.add(UPDATE_RANGE)
             when (child) {
                 rangeView -> {
-                    flag.remove(UPDATE_RANGE)
                     ViewCompat.offsetLeftAndRight(leftHandle, dx)
                     ViewCompat.offsetLeftAndRight(seekHandle, dx)
                     ViewCompat.offsetLeftAndRight(rightHandle, dx)
-                    dispatchPositionChanged(rightHandle, leftHandle, seekHandle)
+                    dispatchPositionChanged(dx, rightHandle, AUTO)
+                    dispatchPositionChanged(dx, leftHandle, AUTO)
+                    dispatchPositionChanged(dx, seekHandle, AUTO)
                 }
-                seekHandle -> dispatchPositionChanged(seekHandle)
+                seekHandle -> dispatchPositionChanged(dx, seekHandle, USER)
                 leftHandle -> {
                     val outsideMinLen = child.right >= rightHandle.left - minLen
                             && rightHandle.right + dx < width - paddingRight
                     val outsideMaxLen = rightHandle.left - child.right >= maxLen && dx < 0
                     if (outsideMinLen || outsideMaxLen) {
                         ViewCompat.offsetLeftAndRight(rightHandle, dx)
-                        dispatchPositionChanged(rightHandle)
+                        dispatchPositionChanged(dx, rightHandle, AUTO)
                     }
-                    dispatchPositionChanged(leftHandle)
+                    dispatchPositionChanged(dx, leftHandle, USER)
                 }
                 rightHandle -> {
                     val outsideMinLen =
@@ -411,10 +401,10 @@ class TrimView : FrameLayout {
                     val outsideMaxLen = child.left - leftHandle.right >= maxLen && dx > 0
                     if (outsideMinLen || outsideMaxLen) {
                         ViewCompat.offsetLeftAndRight(leftHandle, dx)
-                        dispatchPositionChanged(leftHandle)
+                        dispatchPositionChanged(dx, leftHandle, AUTO)
                     }
 
-                    dispatchPositionChanged(rightHandle)
+                    dispatchPositionChanged(dx, rightHandle, USER)
                 }
             }
         }
@@ -425,7 +415,16 @@ class TrimView : FrameLayout {
 
         override fun onViewReleased(child: View, xvel: Float, yvel: Float) {
             super.onViewReleased(child, xvel, yvel)
-            dispatchHandleReleased(child)
+            for (listener in positionChangeListeners) {
+                listener.onActiveHandleReleased(child)
+            }
+        }
+
+        override fun onViewCaptured(capturedChild: View, activePointerId: Int) {
+            super.onViewCaptured(capturedChild, activePointerId)
+            for (listener in positionChangeListeners) {
+                listener.onHandleActivated(capturedChild)
+            }
         }
 
         override fun getViewHorizontalDragRange(child: View): Int = 1
@@ -465,17 +464,17 @@ class TrimView : FrameLayout {
 
     }
 
-    interface PositionChangeListener {
-        fun onLeftPositionChanged() {}
-        fun onRightPositionChanged() {}
-        fun onSeekPositionChanged() {}
-        fun onLeftHandleReleased() {}
-        fun onRightHandleReleased() {}
-        fun onSeekHandleReleased() {}
+    interface HandleCallback {
+
+        fun onHandlePositionChanged(handle: View, dx: Int, reason: Reason) {}
+
+        fun onHandleActivated(handle: View) {}
+
+        fun onActiveHandleReleased(handle: View) {}
     }
 
-    companion object {
-        private const val UPDATE_RANGE = 1
+    enum class Reason {
+        USER, AUTO, SEEK
     }
 
 }
