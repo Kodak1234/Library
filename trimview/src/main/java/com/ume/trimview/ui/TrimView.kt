@@ -267,7 +267,9 @@ class TrimView : FrameLayout {
         ceil((maxWidth() * d) / frameSrc.duration).toInt() + paddingLeft
 
 
-    fun getSeekDuration(): Long = computeDuration(seekHandle.left - leftHandle.width)
+    fun getSeekDuration(): Long {
+        return computeDuration(seekHandle.left) - computeDuration(leftHandle.right)
+    }
 
     fun getStartDuration(): Long = computeDuration(leftHandle.left)
 
