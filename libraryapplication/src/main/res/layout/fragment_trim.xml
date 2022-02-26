@@ -17,8 +17,6 @@
         android:layout_gravity="bottom"
         android:layout_margin="16dp"
         android:padding="2dp"
-        app:maxDuration="20000"
-        app:minDuration="5000"
         tools:layout_width="match_parent" />
 
 </FrameLayout>

@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
+import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -61,7 +62,6 @@ class TrimView : FrameLayout {
 
     init {
 
-        rangeView.setBackgroundColor(Color.parseColor("#a0ff0000"))
         adapter.source = frameSrc
         adapter.addDelegate(FrameDelegate())
         list.layoutManager = object : LinearLayoutManager(context, HORIZONTAL, false) {
@@ -148,7 +148,7 @@ class TrimView : FrameLayout {
         updateWindowRange()
 
         savedState?.let { state ->
-            val newRight = computePosition(state.endDuration) + paddingLeft
+            val newRight = computePosition(state.endDuration)
             rightHandle.layout(
                 newRight - rightHandle.width,
                 rightHandle.top,
@@ -156,7 +156,7 @@ class TrimView : FrameLayout {
                 rightHandle.bottom
             )
 
-            val newLeft = computePosition(state.startDuration) + paddingLeft
+            val newLeft = computePosition(state.startDuration)
             leftHandle.layout(
                 newLeft,
                 leftHandle.top,
@@ -235,12 +235,12 @@ class TrimView : FrameLayout {
     private fun updateWindowRange() {
         if (ViewCompat.isLaidOut(this) && frameSrc.duration > 0) {
             minDuration = max(minDuration, computeDuration(leftHandle.width + seekHandle.width))
-            val dx = (computePosition(maxDuration) + paddingLeft) - rightHandle.right
+            val dx = computePosition(maxDuration) - rightHandle.right
             if (dx < 0 && rightHandle.left + dx >= computePosition(minDuration)) {
                 ViewCompat.offsetLeftAndRight(rightHandle, dx)
                 dispatchPositionChanged(dx, rightHandle, AUTO)
             } else {
-                maxDuration = frameSrc.duration
+                maxDuration = Long.MAX_VALUE
             }
         }
     }
@@ -264,7 +264,7 @@ class TrimView : FrameLayout {
      * @see FrameSource.duration
      */
     private fun computePosition(d: Long): Int =
-        ceil((maxWidth() * d) / frameSrc.duration).toInt()
+        ceil((maxWidth() * d) / frameSrc.duration).toInt() + paddingLeft
 
 
     fun getSeekDuration(): Long = computeDuration(seekHandle.left - leftHandle.width)
