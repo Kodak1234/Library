@@ -80,12 +80,11 @@ class MediaDelegate(
                     if (this) {
                         item.runAnim = false
                         select.setImageResource(R.drawable.animated_check)
-                        if (sdkAtLeast(Build.VERSION_CODES.M)) {
-                            val d = select.drawable as AnimatedVectorDrawable
+                        val d = select.drawable
+                        if (sdkAtLeast(Build.VERSION_CODES.M) && d is AnimatedVectorDrawable) {
                             d.registerAnimationCallback(AnimationCallback23(item, d))
                             d.start()
-                        } else {
-                            val d = (select.drawable as AnimatedVectorDrawableCompat)
+                        } else if (d is AnimatedVectorDrawableCompat) {
                             d.registerAnimationCallback(AnimationCallbackSupport(item, d))
                             d.start()
                         }
