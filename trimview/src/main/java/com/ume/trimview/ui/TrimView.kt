@@ -194,13 +194,13 @@ class TrimView : FrameLayout {
             super.onRestoreInstanceState(state)
     }
 
-    override fun onSaveInstanceState(): Parcelable {
-        return SavedState(super.onSaveInstanceState()).apply {
+    override fun onSaveInstanceState(): Parcelable? {
+        return if (ViewCompat.isLaidOut(this)) SavedState(super.onSaveInstanceState()).apply {
             this.duration = frameSrc.duration
             startDuration = getStartDuration()
             endDuration = getEndDuration()
             uri = frameSrc.uri
-        }
+        } else super.onSaveInstanceState()
     }
 
     fun setUri(uri: Uri, duration: Long) {
