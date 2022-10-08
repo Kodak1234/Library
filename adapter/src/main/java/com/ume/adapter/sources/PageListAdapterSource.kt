@@ -33,6 +33,14 @@ class PageListAdapterSource<E : AdapterItem>(
         differ.removeLoadStateListener(listener)
     }
 
+    fun refresh() {
+        differ.refresh()
+    }
+
+    fun retry() {
+        differ.retry()
+    }
+
     override fun size(): Int = differ.itemCount
 
     override fun get(index: Int): E? = differ.getItem(index)
