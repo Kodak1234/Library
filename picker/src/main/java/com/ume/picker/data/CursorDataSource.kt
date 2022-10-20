@@ -5,7 +5,7 @@ import androidx.collection.LruCache
 import androidx.recyclerview.widget.RecyclerView
 import com.ume.adapter.callback.AdapterSource
 
-abstract class CursorDataSource<E>(
+abstract class CursorDataSource<E : Any>(
     private val adapter: RecyclerView.Adapter<*>
 ) : AdapterSource<E> {
 

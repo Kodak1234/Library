@@ -88,7 +88,7 @@ class MediaDataViewModel(
         private val app: Application,
         private val types: Int
     ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel?> create(modelClass: Class<T>): T {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return modelClass.getConstructor(Application::class.java, Int::class.java)
                 .newInstance(app, types)
         }
