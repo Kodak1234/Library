@@ -57,11 +57,11 @@ data class MediaItem(
         View.OnAttachStateChangeListener {
         var viewRef: TextView? = null
 
-        override fun onViewAttachedToWindow(p0: View?) {
+        override fun onViewAttachedToWindow(p0: View) {
 
         }
 
-        override fun onViewDetachedFromWindow(p0: View?) {
+        override fun onViewDetachedFromWindow(p0: View) {
             viewRef = null
         }
 
