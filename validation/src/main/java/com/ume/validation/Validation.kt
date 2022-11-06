@@ -7,12 +7,12 @@ class Validation {
     private val validators = LinkedList<Validator>()
 
     suspend fun validate(): Boolean {
-        var valid = true
         for (validator in validators) {
-            valid = validator.validate() && valid
+            if (!validator.validate())
+                return false
         }
 
-        return valid
+        return true
     }
 
     fun getValidators(): List<Validator> = Collections.unmodifiableList(validators)

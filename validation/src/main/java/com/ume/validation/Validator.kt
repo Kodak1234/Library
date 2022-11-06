@@ -11,4 +11,6 @@ abstract class Validator {
      * @return true if valid else false
      */
     abstract suspend fun validate(): Boolean
+
+    abstract fun setError()
 }
