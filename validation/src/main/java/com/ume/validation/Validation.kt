@@ -8,8 +8,10 @@ class Validation {
 
     suspend fun validate(): Boolean {
         for (validator in validators) {
-            if (!validator.validate())
+            if (!validator.validate()) {
+                validator.setError()
                 return false
+            }
         }
 
         return true
