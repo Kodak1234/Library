@@ -4,17 +4,21 @@ class ValidatorGroup(
     private vararg val validators: Validator
 ) : Validator() {
 
+    private val errors = mutableListOf<Validator>()
+
     override suspend fun validate(): Boolean {
-        var valid = true
+        errors.clear()
         for (validator in validators) {
-            valid = validator.validate() && valid
+            if (!validator.validate()) {
+                errors.add(validator)
+            }
         }
 
-        return valid
+        return errors.isEmpty()
     }
 
     override fun setError() {
-        for (validator in validators) {
+        for (validator in errors) {
             validator.setError()
         }
     }
