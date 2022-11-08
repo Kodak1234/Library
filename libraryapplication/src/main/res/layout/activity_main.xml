@@ -53,10 +53,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"
-        android:clipChildren="true"
-        android:elevation="8dp"
-        app:elevation="8dp"
-        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior" />
+        app:layout_behavior="com.ume.bottomsheet.SheetBehavior" />
 
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

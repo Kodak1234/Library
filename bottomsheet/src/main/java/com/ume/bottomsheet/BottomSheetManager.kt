@@ -1,86 +1,87 @@
 package com.ume.bottomsheet
 
-import android.content.res.ColorStateList
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.bundleOf
 import androidx.core.view.ViewCompat
-import androidx.core.view.isGone
-import androidx.core.view.isVisible
-import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentManager.FragmentLifecycleCallbacks
-import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.RecyclerView
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetBehavior.*
-import com.google.android.material.color.MaterialColors
-import com.google.android.material.shape.CornerFamily
-import com.google.android.material.shape.MaterialShapeDrawable
-import kotlin.math.max
+import kotlin.math.abs
 
 class BottomSheetManager private constructor(
-    private val scrim: View?,
     private val sheet: ViewGroup,
-    private val behavior: BottomSheetBehavior<*>,
-    private val context: FragmentActivity
+    private val host: LifecycleOwner,
 ) : BottomSheetBehavior.BottomSheetCallback(), IBottomSheetManager {
 
-    private var pendingState: PendingState? = null
+    private var scrollHelper: ScrollActivatedElevation? = null
+    private var op: Op? = null
+
+    private val behavior = BottomSheetBehavior.from(sheet) as SheetBehavior
+    private val mn = when (host) {
+        is Fragment -> host.childFragmentManager
+        is AppCompatActivity -> host.supportFragmentManager
+        else -> throw IllegalArgumentException("Host must be a fragment or an activity")
+    }
 
     init {
-        //capture clicks inside sheet bounds
-        sheet.isSoundEffectsEnabled = false
-        sheet.setOnClickListener { }
-        scrim?.setOnClickListener {
-            if (behavior.isHideable)
-                behavior.state = STATE_HIDDEN
-        }
+
         behavior.addBottomSheetCallback(this)
-        behavior.state = STATE_COLLAPSED
+        behavior.state = BottomSheetBehavior.STATE_COLLAPSED
         behavior.isHideable = true
-        behavior.isDraggable = false
+        behavior.isFitToContents = true
 
-        context.supportFragmentManager.registerFragmentLifecycleCallbacks(
-            FragmentWatcher(), false
-        )
+        mn.registerFragmentLifecycleCallbacks(FragmentWatcher(), false)
     }
 
-    override fun hideBottomSheet() {
+    override fun closeBottomSheet() {
         behavior.isHideable = true
-        behavior.state = STATE_HIDDEN
+        behavior.state = BottomSheetBehavior.STATE_HIDDEN
     }
 
-    override fun showBottomSheet(fragment: Fragment, tag: String?) {
-        when (behavior.state) {
-            STATE_EXPANDED -> {
-                if (tag == null || findFragment()?.tag != tag) {
-                    pendingState = PendingState(fragment, tag)
-                    hideBottomSheet()
-                }
-            }
-            else -> showInternal(fragment, tag)
+    override fun showBottomSheet(fragment: Fragment, config: SheetConfig) {
+        op = Op(fragment, config)
+        if (behavior.state != BottomSheetBehavior.STATE_COLLAPSED) {
+            closeBottomSheet()
+        } else {
+            onStateChanged(sheet, BottomSheetBehavior.STATE_COLLAPSED)
         }
     }
 
     override fun onStateChanged(bottomSheet: View, newState: Int) {
         when (newState) {
-            STATE_HIDDEN -> {
+            BottomSheetBehavior.STATE_HIDDEN -> {
                 val frag = findFragment()
                 if (frag is IBottomSheet)
-                    frag.onBottomSheetHidden()
-                else if (frag == null)
-                    behavior.state = STATE_COLLAPSED
+                    frag.onBottomSheetClosed()
+
+                if (frag != null) {
+                    mn.beginTransaction().remove(frag).commit()
+                } else {
+                    behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                }
             }
-            STATE_COLLAPSED -> {
-                if (pendingState != null) {
-                    showInternal(pendingState!!.frag, pendingState!!.tag)
-                    pendingState = null
+            BottomSheetBehavior.STATE_COLLAPSED -> {
+                val op = this.op
+                if (op != null) {
+                    this.op = null
+
+                    if (op.frag.arguments == null) {
+                        op.frag.arguments = bundleOf(CONFIG to op.config)
+                    } else {
+                        op.frag.requireArguments().putParcelable(CONFIG, op.config)
+                    }
+
+                    mn.beginTransaction()
+                        .replace(sheet.id, op.frag, op.config.tag)
+                        .commit()
                 }
             }
         }
@@ -88,33 +89,46 @@ class BottomSheetManager private constructor(
     }
 
     override fun onSlide(bottomSheet: View, slideOffset: Float) {
-        val liftHelper = findHelper()
-        if (liftHelper?.enable == true)
-            liftHelper.setInterpolation(1 - max(slideOffset, 0f))
-    }
 
-    private fun showInternal(frag: Fragment, tag: String?) {
-        val mn = context.supportFragmentManager
-        mn.beginTransaction()
-            .replace(sheet.id, frag, tag)
-            .commit()
-    }
-
-    private fun findHelper(): LiftHelper? =
-        sheet.getTag(R.id.lift_helper) as LiftHelper?
-
-    private fun findFragment(): Fragment? =
-        context.supportFragmentManager
-            .findFragmentById(sheet.id)
-
-    inner class BackPressHandler : OnBackPressedCallback(true) {
-        override fun handleOnBackPressed() {
-            if (behavior.isHideable)
-                hideBottomSheet()
+        if (getConfig()?.animateRadius == true) {
+            val parent = bottomSheet.parent as View
+            var offset = 1f - abs(slideOffset)
+            //no radius when bottom sheet is fully expanded to match parent height
+            if (parent.height == bottomSheet.height) {
+                offset = 0f
+            }
+            scrollHelper?.setInterpolation(offset)
         }
     }
 
-    inner class FragmentWatcher : FragmentLifecycleCallbacks() {
+
+    private fun getConfig(): SheetConfig? {
+        val args = findFragment()?.arguments
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            args?.getParcelable(CONFIG, SheetConfig::class.java)
+        } else {
+            args?.getParcelable(CONFIG)
+        }
+    }
+
+    private fun findFragment(): Fragment? =
+        mn.findFragmentById(sheet.id)
+
+    private inner class BackPressHandler : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            behavior.state = BottomSheetBehavior.STATE_HIDDEN
+        }
+    }
+
+    private inner class FragmentWatcher : FragmentLifecycleCallbacks() {
+
+        override fun onFragmentStarted(fm: FragmentManager, f: Fragment) {
+            super.onFragmentStarted(fm, f)
+            if (f.id == sheet.id && behavior.state != BottomSheetBehavior.STATE_EXPANDED) {
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            }
+        }
+
         override fun onFragmentViewCreated(
             fm: FragmentManager,
             frag: Fragment,
@@ -122,161 +136,70 @@ class BottomSheetManager private constructor(
             savedInstanceState: Bundle?
         ) {
             if (frag.id == sheet.id) {
+                val config = checkNotNull(getConfig())
                 if (frag is IBottomSheet) {
-                    val elevation = frag.liftElevation
-                    val radius = frag.cornerRadius
-                    setBackground(sheet, radius, frag.backgroundColor)
-                    ViewCompat.setElevation(sheet, frag.elevation)
-                    sheet.setTag(
-                        R.id.lift_helper, LiftHelper(
-                            radius, elevation, sheet,
-                            child.findViewById(frag.liftId),
-                            child.findViewById(frag.scrollId)
-                        )
+                    scrollHelper = ScrollActivatedElevation(
+                        config.cornerRadius,
+                        config.elevation, sheet,
+                        frag.liftOnScroll, frag.scrollingView
                     )
                 }
-                context.onBackPressedDispatcher.addCallback(
+
+                behavior.opacity = config.opacity
+                behavior.dimColor = config.dimColor
+                behavior.isHideable = config.cancelable
+
+                BackgroundUtil.setBackground(
+                    sheet,
+                    config.cornerRadius
+                )
+                ViewCompat.setElevation(sheet, config.elevation)
+
+                frag.requireActivity().onBackPressedDispatcher.addCallback(
                     frag.viewLifecycleOwner,
                     BackPressHandler()
                 )
-                frag.lifecycleScope.launchWhenStarted {
-                    behavior.state = STATE_EXPANDED
-                    behavior.isDraggable = true
-                    behavior.isHideable = frag !is IBottomSheet || frag.cancelable
-                    scrim?.isVisible = true
-                }
             }
         }
 
         override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
             super.onFragmentViewDestroyed(fm, f)
-            //if current attached fragment does not equal then don't hide
-            //bottom sheet.
-            val active = findFragment()
-            if (f.id == sheet.id && f.isRemoving &&
-                (active == f || active == null)
-            ) {
-                behavior.state = STATE_COLLAPSED
-                scrim?.isVisible = false
-                behavior.isDraggable = false
-                behavior.isHideable = true
-                sheet.setTag(R.id.lift_helper, null)
+
+            if (f.id == sheet.id && f.isRemoving) {
+                behavior.state = BottomSheetBehavior.STATE_COLLAPSED
             }
         }
     }
 
-    class LiftHelper(
-        radius: Float,
-        private val elevation: Float,
-        private val sheet: ViewGroup,
-        private val lift: View?,
-        private val scroll: View?
-    ) : NestedScrollView.OnScrollChangeListener, RecyclerView.OnScrollListener() {
+    private class Op(
+        val frag: Fragment,
+        val config: SheetConfig
+    )
 
-        var enable = true
-            set(value) {
-                if (!value && value != field)
-                    setInterpolation(1f)
-                field = value
-            }
+    companion object : DefaultLifecycleObserver {
 
-
-        init {
-            setBackground(lift, radius)
-            when (scroll) {
-                is NestedScrollView -> scroll.setOnScrollChangeListener(this)
-                is RecyclerView -> scroll.addOnScrollListener(this)
-            }
-        }
-
-        override fun onScrollChange(
-            v: NestedScrollView?,
-            scrollX: Int,
-            scrollY: Int,
-            oldScrollX: Int,
-            oldScrollY: Int
-        ) {
-            onScrollChange(scrollY)
-        }
-
-        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-            super.onScrolled(recyclerView, dx, dy)
-            if (dy >= 0)
-                onScrollChange(dy)
-            else {
-                val child = recyclerView.getChildAt(0)
-                val pos = recyclerView.getChildAdapterPosition(child)
-                if (pos == 0 && child.top == 0)
-                    onScrollChange(0)
-            }
-        }
-
-        fun setInterpolation(value: Float) {
-            getBackground(lift)?.interpolation = value
-            getBackground(sheet)?.interpolation = value
-        }
-
-        private fun onScrollChange(scrollY: Int) {
-            if (scrollY > 0 && enable) {
-                ViewCompat.setElevation(lift!!, elevation)
-            } else if (scrollY == 0 && enable) {
-                ViewCompat.setElevation(lift!!, 0f)
-            }
-        }
-    }
-
-    class PendingState(val frag: Fragment, val tag: String?)
-
-    companion object {
+        private const val CONFIG = "com.ume.bottomsheet.config"
+        private val store by lazy { mutableMapOf<LifecycleOwner, BottomSheetManager>() }
 
         fun attach(
-            context: FragmentActivity,
-            scrim: View?,
-            container: ViewGroup,
-            behavior: BottomSheetBehavior<*>
+            host: LifecycleOwner,
+            sheet: ViewGroup
         ): IBottomSheetManager {
-            val content = context.findViewById<View>(android.R.id.content)
-            if (content.getTag(R.id.bottom_sheet_manager) != null)
-                throw UnsupportedOperationException("Bottom sheet manager is already attached")
-            val mn = BottomSheetManager(scrim, container, behavior, context)
-            content.setTag(R.id.bottom_sheet_manager, mn)
+            check(store[host] == null) { "Host already has a manager attached" }
+            val mn = BottomSheetManager(sheet, host)
+            host.lifecycle.addObserver(this)
+            store[host] = mn
             return mn
         }
 
-        fun find(context: FragmentActivity): IBottomSheetManager? {
-            return context.findViewById<View>(android.R.id.content)
-                .getTag(R.id.bottom_sheet_manager) as IBottomSheetManager?
+        fun find(host: LifecycleOwner): IBottomSheetManager? {
+            return store[host]
         }
 
-        fun find(frag: Fragment): IBottomSheetManager? = find(frag.requireActivity())
-
-        private fun setBackground(
-            view: View?, radius: Float,
-            color: Int? = null
-        ) {
-            if (view != null) {
-                ViewCompat.setBackground(view, MaterialShapeDrawable().apply {
-                    fillColor = ColorStateList.valueOf(
-                        when {
-                            color != null -> color
-                            view.background is ColorDrawable -> (view.background as ColorDrawable).color
-                            else -> MaterialColors.getColor(
-                                view,
-                                R.attr.colorSurface,
-                                Color.WHITE
-                            )
-                        }
-                    )
-                    shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                        .setTopLeftCorner(CornerFamily.ROUNDED, radius)
-                        .setTopRightCorner(CornerFamily.ROUNDED, radius)
-                        .build()
-                })
-            }
-        }
-
-        private fun getBackground(view: View?): MaterialShapeDrawable? {
-            return view?.background as? MaterialShapeDrawable?
+        override fun onDestroy(owner: LifecycleOwner) {
+            super.onDestroy(owner)
+            owner.lifecycle.removeObserver(this)
+            store.remove(owner)
         }
     }
 }

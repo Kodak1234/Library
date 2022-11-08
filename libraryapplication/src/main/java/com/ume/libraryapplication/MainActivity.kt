@@ -1,13 +1,14 @@
 package com.ume.libraryapplication
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.ume.bottomsheet.BottomSheetManager
+import com.ume.bottomsheet.SheetConfig
 import com.ume.guidedtour.ISceneManager
 import com.ume.guidedtour.Scene
 import com.ume.guidedtour.impl.AsynchronousSceneManager
@@ -36,17 +37,21 @@ class MainActivity : AppCompatActivity(), ScreenFragment.ScreenSelectionListener
 
         val sheet: ViewGroup = findViewById(R.id.container)!!
         val behavior = BottomSheetBehavior.from(sheet)
-        val mn = BottomSheetManager.attach(
-            this, null, sheet, behavior
-        )
+        BottomSheetManager.attach(this, sheet)
 
         val show = findViewById<View>(R.id.showSheet)
         val close = findViewById<View>(R.id.closeButton)
         show.setOnClickListener {
-            mn.showBottomSheet(BottomSheetExample(), "Hello")
+            BottomSheetManager.find(this)?.showBottomSheet(
+                BottomSheetExample(), SheetConfig()
+                    .setCancelable(false)
+                    .setDimColor(Color.RED)
+                    .setAnimateRadius(false)
+                    .setCornerRadius(16f)
+            )
         }
         close.setOnClickListener {
-            mn.hideBottomSheet()
+            BottomSheetManager.find(this)?.closeBottomSheet()
         }
 
         sceneMn = AsynchronousSceneManager(
