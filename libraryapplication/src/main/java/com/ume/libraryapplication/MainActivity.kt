@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity(), ScreenFragment.ScreenSelectionListener
                     .setCancelable(true)
                     .setDimColor(Color.RED)
                     .setElevation(resources.dp(8f))
-                    .setAnimateRadius(false)
+                    .setAnimateRadius(true)
                     .setCornerRadius(16f)
             )
         }

@@ -95,7 +95,7 @@ class BottomSheetManager private constructor(
             val parent = bottomSheet.parent as View
             var offset = 1f - abs(slideOffset)
             //no radius when bottom sheet is fully expanded to match parent height
-            if (parent.height == bottomSheet.height) {
+            if (bottomSheet.top == 0) {
                 offset = 0f
             }
             scrollHelper?.setInterpolation(offset)
