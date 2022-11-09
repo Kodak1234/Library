@@ -137,23 +137,25 @@ class BottomSheetManager private constructor(
         ) {
             if (frag.id == sheet.id) {
                 val config = checkNotNull(getConfig())
-                if (frag is IBottomSheet) {
-                    scrollHelper = ScrollActivatedElevation(
-                        config.cornerRadius,
-                        config.elevation, sheet,
-                        frag.liftOnScroll, frag.scrollingView
-                    )
-                }
+
+                val sheet = frag as? IBottomSheet
+                scrollHelper = ScrollActivatedElevation(
+                    config.cornerRadius,
+                    config.elevation, frag.requireView(),
+                    sheet?.liftOnScroll, sheet?.scrollingView
+                )
 
                 behavior.opacity = config.opacity
                 behavior.dimColor = config.dimColor
                 behavior.isHideable = config.cancelable
 
                 BackgroundUtil.setBackground(
-                    sheet,
-                    config.cornerRadius
+                    frag.requireView(),
+                    config.cornerRadius,
+                    BackgroundUtil.getColor(frag.requireView())
                 )
-                ViewCompat.setElevation(sheet, config.elevation)
+                checkNotNull(BackgroundUtil.getBackground(frag.requireView()))
+                    .elevation = config.elevation
 
                 frag.requireActivity().onBackPressedDispatcher.addCallback(
                     frag.viewLifecycleOwner,

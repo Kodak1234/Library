@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.ume.bottomsheet.BottomSheetManager
 import com.ume.bottomsheet.SheetConfig
@@ -14,8 +15,10 @@ import com.ume.guidedtour.Scene
 import com.ume.guidedtour.impl.AsynchronousSceneManager
 import com.ume.guidedtour.impl.NoOpDictator
 import com.ume.guidedtour.impl.NoOpWatcher
+import com.ume.libraryapplication.screens.DemoFragment
 import com.ume.libraryapplication.screens.TrimFragment
 import com.ume.phone.PhoneUtil
+import com.ume.util.dp
 
 class MainActivity : AppCompatActivity(), ScreenFragment.ScreenSelectionListener {
     private lateinit var sceneMn: ISceneManager
@@ -43,9 +46,10 @@ class MainActivity : AppCompatActivity(), ScreenFragment.ScreenSelectionListener
         val close = findViewById<View>(R.id.closeButton)
         show.setOnClickListener {
             BottomSheetManager.find(this)?.showBottomSheet(
-                BottomSheetExample(), SheetConfig()
-                    .setCancelable(false)
+                DemoFragment(), SheetConfig()
+                    .setCancelable(true)
                     .setDimColor(Color.RED)
+                    .setElevation(resources.dp(8f))
                     .setAnimateRadius(false)
                     .setCornerRadius(16f)
             )

@@ -1,7 +1,6 @@
 package com.ume.bottomsheet
 
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.view.ViewCompat
 import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.RecyclerView
@@ -9,7 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 class ScrollActivatedElevation(
     radius: Float,
     private val elevation: Float,
-    private val sheet: ViewGroup,
+    private val sheet: View,
     private val lift: View?,
     private val scroll: View?
 ) : NestedScrollView.OnScrollChangeListener, RecyclerView.OnScrollListener() {

@@ -16,27 +16,27 @@ internal object BackgroundUtil {
         color: Int? = null
     ) {
         if (view != null) {
-            ViewCompat.setBackground(view, MaterialShapeDrawable().apply {
-                fillColor = ColorStateList.valueOf(
-                    when {
-                        color != null -> color
-                        view.background is ColorDrawable -> (view.background as ColorDrawable).color
-                        else -> MaterialColors.getColor(
-                            view,
-                            R.attr.colorSurface,
-                            Color.WHITE
-                        )
-                    }
-                )
-                shapeAppearanceModel = shapeAppearanceModel.toBuilder()
-                    .setTopLeftCorner(CornerFamily.ROUNDED, radius)
-                    .setTopRightCorner(CornerFamily.ROUNDED, radius)
-                    .build()
-            })
+            val bg = view.background as? MaterialShapeDrawable ?: MaterialShapeDrawable()
+            bg.shapeAppearanceModel = bg.shapeAppearanceModel.toBuilder()
+                .setTopLeftCorner(CornerFamily.ROUNDED, radius)
+                .setTopRightCorner(CornerFamily.ROUNDED, radius)
+                .build()
+
+            val fill = color ?: getColor(view)
+            if (fill != null)
+                bg.fillColor = ColorStateList.valueOf(fill)
+
+            if (view.background != bg) {
+                ViewCompat.setBackground(view, bg)
+            }
         }
     }
 
     fun getBackground(view: View?): MaterialShapeDrawable? {
         return view?.background as? MaterialShapeDrawable?
+    }
+
+    fun getColor(view: View): Int? {
+        return (view.background as? ColorDrawable)?.color
     }
 }
