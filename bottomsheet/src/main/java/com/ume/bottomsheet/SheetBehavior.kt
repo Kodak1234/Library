@@ -90,7 +90,7 @@ class SheetBehavior(context: Context, attr: AttributeSet?) :
         child: View,
         event: MotionEvent
     ): Boolean {
-        interceptingTouch = state == STATE_EXPANDED
+        interceptingTouch = currentState == STATE_EXPANDED
                 && event.action == MotionEvent.ACTION_DOWN
                 && !bounds.contains(event.x.toInt(), event.y.toInt())
 
