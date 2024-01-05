@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.os.Build
+import android.provider.Settings
 import android.util.TypedValue
 import android.view.View
 import androidx.annotation.ChecksSdkIntAtLeast
@@ -59,4 +60,13 @@ fun View.setEnable(enabled: Boolean) {
 @ChecksSdkIntAtLeast(parameter = 0)
 fun sdkAtLeast(sdk: Int): Boolean {
     return Build.VERSION.SDK_INT >= sdk
+}
+
+//Get device name
+fun deviceName(context: Context): String {
+    return "${Build.MANUFACTURER} ${
+        if (sdkAtLeast(Build.VERSION_CODES.N_MR1)) {
+            Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)
+        } else null ?: Build.MODEL
+    }".replaceFirstChar { it.titlecase() }
 }
