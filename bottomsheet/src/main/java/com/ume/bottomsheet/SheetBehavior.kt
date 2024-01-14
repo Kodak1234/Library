@@ -19,6 +19,7 @@ class SheetBehavior(context: Context, attr: AttributeSet?) :
 
     var opacity: Float = 0f
     var dimColor: Int = 0
+    var allowClickBehind = false
 
     private var interceptingTouch = false
     private var bounds = Rect()
@@ -93,6 +94,7 @@ class SheetBehavior(context: Context, attr: AttributeSet?) :
         interceptingTouch = currentState == STATE_EXPANDED
                 && event.action == MotionEvent.ACTION_DOWN
                 && !bounds.contains(event.x.toInt(), event.y.toInt())
+                && !allowClickBehind
 
         return super.onInterceptTouchEvent(parent, child, event) || interceptingTouch
     }

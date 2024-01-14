@@ -149,6 +149,7 @@ class BottomSheetManager private constructor(
                 behavior.opacity = config.opacity
                 behavior.dimColor = config.dimColor
                 behavior.isHideable = config.cancelable
+                behavior.allowClickBehind = config.allowClickBehind
 
                 BackgroundUtil.setBackground(
                     frag.requireView(),
