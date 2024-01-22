@@ -50,7 +50,7 @@ class FragmentSheet : Fragment() {
             val overlay = childFragmentManager.findFragmentById(R.id.container) != null
             manager.showBottomSheet(
                 DemoFragment(), SheetConfig()
-                    .setCancelable(overlay)
+                    .setCancelable(false)
                     .setDimColor(Color.RED)
                     .setElevation(resources.dp(8f))
                     .setOverlay(overlay)

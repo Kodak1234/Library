@@ -1,4 +1,4 @@
-package com.ume.socialstat.di
+package com.ume.di
 
 import kotlin.reflect.KClass
 

@@ -1,4 +1,4 @@
-package com.ume.socialstat.di
+package com.ume.di
 
 inline fun <reified K> inject(scope: Any? = null): K {
     return checkNotNull(injectNullable(scope))

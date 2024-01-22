@@ -1,4 +1,4 @@
-package com.ume.socialstat.di
+package com.ume.di
 
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle.State
