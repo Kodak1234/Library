@@ -14,44 +14,28 @@ import androidx.fragment.app.FragmentManager.FragmentLifecycleCallbacks
 import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import androidx.savedstate.SavedStateRegistry
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import java.util.UUID
 import kotlin.math.abs
 
 class BottomSheetManager private constructor(
     private val sheet: ViewGroup,
-    host: LifecycleOwner,
-) : BottomSheetBehavior.BottomSheetCallback(), IBottomSheetManager,
-    SavedStateRegistry.SavedStateProvider {
+    private val manager: FragmentManager,
+    private val state: Bundle?,
+) : BottomSheetBehavior.BottomSheetCallback(), IBottomSheetManager {
 
     private var scrollHelper: ScrollActivatedElevation? = null
     private var op: Op? = null
-    private var detachedFragmentTag: String = ""
 
     private val behavior = BottomSheetBehavior.from(sheet) as SheetBehavior
-    private val mn = when (host) {
-        is Fragment -> host.childFragmentManager
-        is AppCompatActivity -> host.supportFragmentManager
-        else -> throw IllegalArgumentException("Host must be a fragment or an activity")
-    }
-
-    private val stateRegistry = when (host) {
-        is Fragment -> host.savedStateRegistry
-        is AppCompatActivity -> host.savedStateRegistry
-        else -> throw IllegalArgumentException("Host must be a fragment or an activity")
-    }
 
     init {
 
-        detachedFragmentTag = stateRegistry.consumeRestoredStateForKey(STATE)
-            ?.getString(DETACHED_FRAGMENT) ?: ""
         behavior.addBottomSheetCallback(this)
         closeBottomSheet()
         behavior.isFitToContents = true
         behavior.skipCollapsed = true
-        stateRegistry.registerSavedStateProvider(STATE, this)
-        mn.registerFragmentLifecycleCallbacks(FragmentWatcher(), false)
+        manager.registerFragmentLifecycleCallbacks(FragmentWatcher(), false)
     }
 
     override fun closeBottomSheet() {
@@ -73,22 +57,23 @@ class BottomSheetManager private constructor(
         when (newState) {
             BottomSheetBehavior.STATE_HIDDEN -> {
                 val frag = findFragment()
-                val detachedFragment = mn.findFragmentByTag(detachedFragmentTag)
+                val detachedFragment =
+                    manager.findFragmentByTag(state?.getString(DETACHED_FRAGMENT, ""))
 
                 var transaction: FragmentTransaction? = null
 
                 frag?.let {
-                    transaction = mn.beginTransaction()
+                    transaction = manager.beginTransaction()
                     val eventDelegate = frag as? IBottomSheetEventDelegate
 
                     //if the new fragment is an overlay, don't kill current fragment,
                     //just detach it from the UI
                     if (op?.config?.overlay == true) {
-                        detachedFragmentTag = it.tag!!
+                        state?.putString(DETACHED_FRAGMENT, it.tag)
                         transaction!!.detach(it)
                         eventDelegate?.onBottomSheetHidden()
                     } else {
-                        detachedFragmentTag = ""
+                        state?.remove(DETACHED_FRAGMENT)
                         transaction!!.remove(it)
                         eventDelegate?.onBottomSheetDismissed()
                     }
@@ -101,7 +86,7 @@ class BottomSheetManager private constructor(
                         op.frag.requireArguments().putParcelable(CONFIG, op.config)
                     }
 
-                    transaction = transaction ?: mn.beginTransaction()
+                    transaction = transaction ?: manager.beginTransaction()
                     transaction!!.add(
                         sheet.id,
                         op.frag,
@@ -145,14 +130,12 @@ class BottomSheetManager private constructor(
     }
 
     private fun findFragment(): Fragment? =
-        mn.findFragmentById(sheet.id)
-
-    override fun saveState(): Bundle = bundleOf(DETACHED_FRAGMENT to detachedFragmentTag)
+        manager.findFragmentById(sheet.id)
 
     private inner class BackPressHandler : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             val delegate = findFragment() as? IBottomSheetEventDelegate
-            if (delegate?.onBackPress() == false) {
+            if (delegate == null && behavior.isHideable || delegate?.onBackPress() == false) {
                 closeBottomSheet()
             }
         }
@@ -214,7 +197,7 @@ class BottomSheetManager private constructor(
                 }
                 //current fragment is not null means it is a detached fragment
                 if (currentFragment != null) {
-                    mn.beginTransaction().attach(currentFragment)
+                    manager.beginTransaction().attach(currentFragment)
                         .commit()
                 }
             }
@@ -227,23 +210,54 @@ class BottomSheetManager private constructor(
         val config: SheetConfig
     )
 
+    class Builder(private val sheet: ViewGroup) {
+        private var fragmentManager: FragmentManager? = null
+        private var state: Bundle? = null
+        private var owner: LifecycleOwner? = null
+
+        fun setFragmentManager(manager: FragmentManager): Builder {
+            fragmentManager = manager
+            return this
+        }
+
+        fun setState(state: Bundle?): Builder {
+            this.state = state
+            return this
+        }
+
+        fun setOwner(owner: LifecycleOwner): Builder {
+            this.owner = owner
+            return this
+        }
+
+        fun build(): BottomSheetManager {
+            when (val host = owner) {
+                is Fragment -> {
+                    fragmentManager = fragmentManager ?: host.childFragmentManager
+                }
+
+                is AppCompatActivity -> {
+                    fragmentManager = fragmentManager ?: host.supportFragmentManager
+                }
+            }
+
+            checkNotNull(fragmentManager) { "setFragmentManager must be called" }
+            checkNotNull(owner) { "setOwner must be called" }
+            check(store[owner] == null) { "Host already has a manager attached" }
+
+            val manager = BottomSheetManager(sheet, fragmentManager!!, state)
+            owner!!.lifecycle.addObserver(BottomSheetManager)
+            store[owner!!] = manager
+
+            return manager
+        }
+    }
+
     companion object : DefaultLifecycleObserver {
 
-        private const val STATE = "com.ume.bottomsheet.manager-state"
         private const val CONFIG = "com.ume.bottomsheet.config"
         private const val DETACHED_FRAGMENT = "com.ume.bottomsheet.detached-fragment"
         private val store by lazy { mutableMapOf<LifecycleOwner, BottomSheetManager>() }
-
-        fun attach(
-            host: LifecycleOwner,
-            sheet: ViewGroup
-        ): BottomSheetManager {
-            check(store[host] == null) { "Host already has a manager attached" }
-            val mn = BottomSheetManager(sheet, host)
-            host.lifecycle.addObserver(this)
-            store[host] = mn
-            return mn
-        }
 
         fun find(host: LifecycleOwner): BottomSheetManager? {
             return store[host]
@@ -251,7 +265,6 @@ class BottomSheetManager private constructor(
 
         override fun onDestroy(owner: LifecycleOwner) {
             super.onDestroy(owner)
-            find(owner)?.stateRegistry?.unregisterSavedStateProvider(STATE)
             owner.lifecycle.removeObserver(this)
             store.remove(owner)
         }

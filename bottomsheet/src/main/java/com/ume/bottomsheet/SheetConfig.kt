@@ -3,6 +3,7 @@ package com.ume.bottomsheet
 import android.graphics.Color
 import android.os.Parcel
 import android.os.Parcelable
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 
 open class SheetConfig() : Parcelable {
     var tag: String? = null
@@ -32,7 +33,7 @@ open class SheetConfig() : Parcelable {
     var overlay: Boolean = false
         private set
 
-    var peekHeight: Int = 0
+    var peekHeight: Int = BottomSheetBehavior.PEEK_HEIGHT_AUTO
         private set
 
     constructor(parcel: Parcel) : this() {
@@ -93,7 +94,7 @@ open class SheetConfig() : Parcelable {
     }
 
     fun setPeekHeight(height: Int): SheetConfig {
-        peekHeight = height
+        peekHeight = if (height > 0) height else peekHeight
         return this
     }
 

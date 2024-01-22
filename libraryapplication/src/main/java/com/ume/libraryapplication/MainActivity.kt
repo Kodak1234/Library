@@ -1,81 +1,35 @@
 package com.ume.libraryapplication
 
-import android.graphics.Color
 import android.os.Bundle
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.WindowCompat
 import androidx.fragment.app.Fragment
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.ume.bottomsheet.BottomSheetManager
-import com.ume.bottomsheet.SheetConfig
-import com.ume.guidedtour.ISceneManager
-import com.ume.guidedtour.Scene
-import com.ume.guidedtour.impl.AsynchronousSceneManager
-import com.ume.guidedtour.impl.NoOpDictator
-import com.ume.guidedtour.impl.NoOpWatcher
-import com.ume.libraryapplication.screens.DemoFragment
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.navigation.NavigationView
 import com.ume.libraryapplication.screens.TrimFragment
-import com.ume.phone.PhoneUtil
-import com.ume.util.dp
+import com.ume.navigation.navigation.NavigationControllerCallback
+import com.ume.navigation.navigation.NavigationControllerImpl
+import com.ume.navigation.navigation.NavigationControllerImpl.Info
 
-class MainActivity : AppCompatActivity(), ScreenFragment.ScreenSelectionListener {
-    private lateinit var sceneMn: ISceneManager
+class MainActivity : AppCompatActivity(), ScreenFragment.ScreenSelectionListener,
+    NavigationControllerCallback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .add(R.id.fraContainer, ScreenFragment())
-                .addToBackStack(null)
-                .commit()
-        }
-
-        val v = findViewById<TextView>(R.id.text)
-        v.text = PhoneUtil.create(this)
-            .getCode()
-
-        val sheet: ViewGroup = findViewById(R.id.container)!!
-        val behavior = BottomSheetBehavior.from(sheet)
-        BottomSheetManager.attach(this, sheet)
-
-        val show = findViewById<View>(R.id.showSheet)
-        val close = findViewById<View>(R.id.closeButton)
-        show.setOnClickListener {
-            BottomSheetManager.find(this)?.showBottomSheet(
-                DemoFragment(), SheetConfig()
-                    .setCancelable(false)
-                    .setDimColor(Color.RED)
-                    .setElevation(resources.dp(8f))
-                    .setOverlay(supportFragmentManager.findFragmentById(R.id.container) != null)
-                    .setAnimateRadius(true)
-                    .setCornerRadius(16f)
-            )
-        }
-        close.setOnClickListener {
-            BottomSheetManager.find(this)?.closeBottomSheet()
-        }
-
-        sceneMn = AsynchronousSceneManager(
-            Scene(
-                NoOpDictator(), VSpotGuide(
-                    close,
-                    "Close Bottom Sheet", "Click button to hide bottom sheet"
-                ), BottomSheetWatcher(behavior)
-            ),
-            Scene(
-                NoOpDictator(), VSpotGuide(
-                    show,
-                    "Show Bottom Sheet", "Click button to reveal bottom sheet"
-                ),
-                NoOpWatcher()
+        val controller = NavigationControllerImpl(
+            Info(
+                R.id.fraContainer, supportFragmentManager, this
             )
         )
-        //sceneMn.beginTour(1000)
+
+        val nav: BottomNavigationView = findViewById(R.id.nav)
+        nav.setOnItemSelectedListener {
+            controller.select(it.itemId)
+            true
+        }
+        controller.select(R.id.tab1)
+
     }
 
     override fun onScreenSelected(screen: ScreenFragment.Screen) {
@@ -85,10 +39,36 @@ class MainActivity : AppCompatActivity(), ScreenFragment.ScreenSelectionListener
         }
 
         if (frag != null) {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.fraContainer, frag)
-                .addToBackStack(null)
-                .commit()
+            supportFragmentManager.beginTransaction().replace(R.id.fraContainer, frag)
+                .addToBackStack(null).commit()
+        }
+    }
+
+    override fun getFragmentTag(id: Int): String {
+        return when (id) {
+            R.id.tab1 -> {
+                "tab1"
+            }
+
+            R.id.tab2 -> {
+                "tab2"
+            }
+
+            else -> throw IllegalArgumentException()
+        }
+    }
+
+    override fun getFragment(id: Int): Fragment {
+        return when (id) {
+            R.id.tab1 -> {
+                FragmentSheet()
+            }
+
+            R.id.tab2 -> {
+                BottomSheetExample()
+            }
+
+            else -> throw IllegalArgumentException()
         }
     }
 }
