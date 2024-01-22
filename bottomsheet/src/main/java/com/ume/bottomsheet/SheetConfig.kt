@@ -32,6 +32,9 @@ open class SheetConfig() : Parcelable {
     var overlay: Boolean = false
         private set
 
+    var peekHeight: Int = 0
+        private set
+
     constructor(parcel: Parcel) : this() {
         cancelable = parcel.readInt() == 1
         elevation = parcel.readFloat()
@@ -41,6 +44,7 @@ open class SheetConfig() : Parcelable {
         animateRadius = parcel.readInt() == 1
         allowClickBehind = parcel.readInt() == 1
         overlay = parcel.readInt() == 1
+        peekHeight = parcel.readInt()
     }
 
     fun setTag(tag: String): SheetConfig {
@@ -88,6 +92,11 @@ open class SheetConfig() : Parcelable {
         return this
     }
 
+    fun setPeekHeight(height: Int): SheetConfig {
+        peekHeight = height
+        return this
+    }
+
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         parcel.writeInt(if (cancelable) 1 else 0)
         parcel.writeFloat(elevation)
@@ -97,6 +106,7 @@ open class SheetConfig() : Parcelable {
         parcel.writeInt(if (animateRadius) 1 else 0)
         parcel.writeInt(if (allowClickBehind) 1 else 0)
         parcel.writeInt(if (overlay) 1 else 0)
+        parcel.writeInt(peekHeight)
     }
 
     override fun describeContents(): Int {

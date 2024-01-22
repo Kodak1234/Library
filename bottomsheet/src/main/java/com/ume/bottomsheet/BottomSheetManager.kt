@@ -47,8 +47,7 @@ class BottomSheetManager private constructor(
         detachedFragmentTag = stateRegistry.consumeRestoredStateForKey(STATE)
             ?.getString(DETACHED_FRAGMENT) ?: ""
         behavior.addBottomSheetCallback(this)
-        behavior.state = BottomSheetBehavior.STATE_HIDDEN
-        behavior.isHideable = true
+        closeBottomSheet()
         behavior.isFitToContents = true
         behavior.skipCollapsed = true
         stateRegistry.registerSavedStateProvider(STATE, this)
@@ -188,6 +187,7 @@ class BottomSheetManager private constructor(
                 behavior.dimColor = config.dimColor
                 behavior.isHideable = config.cancelable
                 behavior.allowClickBehind = config.allowClickBehind
+                behavior.setPeekHeight(config.peekHeight, true)
 
                 BackgroundUtil.setBackground(
                     frag.requireView(),
