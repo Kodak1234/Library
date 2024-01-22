@@ -7,13 +7,13 @@ import android.util.Log
 import android.view.View
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import com.ume.bottomsheet.IBottomSheet
+import com.ume.bottomsheet.IBottomSheetEventDelegate
 import com.ume.picker.data.MediaItem
 import com.ume.picker.ui.PickerFragment
 import com.ume.util.hasPermission
 
 class BottomSheetExample : Fragment(R.layout.fragment_bottom_sheet),
-    PickerFragment.Callback,IBottomSheet {
+    PickerFragment.Callback,IBottomSheetEventDelegate {
 
     private var count = 0
     private lateinit var title: TextView
@@ -54,11 +54,6 @@ class BottomSheetExample : Fragment(R.layout.fragment_bottom_sheet),
         title.text = "$count media${if (count > 1) "s" else ""} selected."
     }
 
-    override fun onBottomSheetClosed() {
-        parentFragmentManager.beginTransaction()
-            .remove(this)
-            .commit()
-    }
 
     companion object {
         private const val TAG = "BottomSheetExample"

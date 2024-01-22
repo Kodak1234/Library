@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
+import androidx.fragment.app.Fragment
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.ume.bottomsheet.BottomSheetManager
 import com.ume.bottomsheet.SheetConfig
@@ -47,9 +48,10 @@ class MainActivity : AppCompatActivity(), ScreenFragment.ScreenSelectionListener
         show.setOnClickListener {
             BottomSheetManager.find(this)?.showBottomSheet(
                 DemoFragment(), SheetConfig()
-                    .setCancelable(true)
+                    .setCancelable(false)
                     .setDimColor(Color.RED)
                     .setElevation(resources.dp(8f))
+                    .setOverlay(supportFragmentManager.findFragmentById(R.id.container) != null)
                     .setAnimateRadius(true)
                     .setCornerRadius(16f)
             )

@@ -29,6 +29,9 @@ open class SheetConfig() : Parcelable {
     var allowClickBehind: Boolean = true
         private set
 
+    var overlay: Boolean = false
+        private set
+
     constructor(parcel: Parcel) : this() {
         cancelable = parcel.readInt() == 1
         elevation = parcel.readFloat()
@@ -37,6 +40,7 @@ open class SheetConfig() : Parcelable {
         dimColor = parcel.readInt()
         animateRadius = parcel.readInt() == 1
         allowClickBehind = parcel.readInt() == 1
+        overlay = parcel.readInt() == 1
     }
 
     fun setTag(tag: String): SheetConfig {
@@ -79,6 +83,11 @@ open class SheetConfig() : Parcelable {
         return this
     }
 
+    fun setOverlay(overlay: Boolean): SheetConfig {
+        this.overlay = overlay
+        return this
+    }
+
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         parcel.writeInt(if (cancelable) 1 else 0)
         parcel.writeFloat(elevation)
@@ -87,6 +96,7 @@ open class SheetConfig() : Parcelable {
         parcel.writeInt(dimColor)
         parcel.writeInt(if (animateRadius) 1 else 0)
         parcel.writeInt(if (allowClickBehind) 1 else 0)
+        parcel.writeInt(if (overlay) 1 else 0)
     }
 
     override fun describeContents(): Int {

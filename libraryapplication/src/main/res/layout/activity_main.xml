@@ -55,6 +55,7 @@
         android:layout_height="wrap_content"
         tools:layout="@layout/fragment_demo"
         app:behavior_drawClickBound="false"
+        app:behavior_peekHeight="200dp"
         app:layout_behavior="com.ume.bottomsheet.SheetBehavior" />
 
 
