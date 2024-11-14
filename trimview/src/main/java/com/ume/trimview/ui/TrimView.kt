@@ -119,7 +119,7 @@ class TrimView : FrameLayout {
         bg = MaterialShapeDrawable().apply {
             fillColor = ColorStateList.valueOf(
                 if (background is ColorDrawable) (background as ColorDrawable).color
-                else MaterialColors.getColor(this@TrimView, R.attr.colorSurface, Color.WHITE)
+                else MaterialColors.getColor(this@TrimView, com.google.android.material.R.attr.colorSurface, Color.WHITE)
             )
             strokeColor = ColorStateList.valueOf(strokeC)
             strokeWidth = strokeW
