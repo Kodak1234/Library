@@ -5,12 +5,12 @@ apply plugin: 'maven-publish'
 
 
 android {
-    compileSdkVersion 33
+    compileSdk 35
 
 
     defaultConfig {
         minSdkVersion 14
-        targetSdkVersion 33
+        targetSdk 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -23,9 +23,14 @@ android {
         }
     }
 
-    kotlinOptions {
-        jvmTarget = "1.8"
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
     namespace 'com.ume.adapter'
 
 }
